@@ -10,6 +10,7 @@ export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk 
 if [ $# -eq 0 ] || [ -z "$1" ]
 then
     # If no arguments are supplied, just assume this server to be the only ZooKeeper server
+    echo "No ZooKeeper was provided --> will proceed with IP of this machine: $PRIVATE_IP"
     zk=$PRIVATE_IP
 else
     zk=$1
@@ -45,4 +46,7 @@ sudo service docker stop
 sudo rm /etc/docker/key.json
 
 echo ""
-echo "Your IP is: $PRIVATE_IP"
+echo -e "SWARM_ZOOKEEPER=\e[1;32m$ZOOKEEPER_SERVERS\e[0m"
+
+echo ""
+echo "Shutdown or reboot to apply user group changes!"
