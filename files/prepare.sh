@@ -4,10 +4,13 @@
 # Export Parameters #
 #####################
 
+# find the IP address of the machine that is executing this code:
+export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+
 if [ $# -eq 0 ] || [ -z "$1" ]
 then
-    # no arguments were supplied, so ask for ZooKeeper server IPs:
-    read -p "Please provide ZooKeeper server IPs like \"1.2.3.4\" or \"1.2.3.4,5.6.7.8\"!" zk
+    # If no arguments are supplied, just assume this server to be the only ZooKeeper server
+    zk=$PRIVATE_IP
 else
     zk=$1
 fi
@@ -20,8 +23,6 @@ fi
 # For this tutorial, we'll just spin up a ZooKeeper Docker container on the Docker Swarm manager node. In production, you'll certainly want to add more nodes to the cluster (e.g. on the Docker Swarm worker nodes) or use an existing fault-tolerant ZooKeeper ensemble.
 export ZOOKEEPER_SERVERS=$zk
 
-# find the IP address of the machine that is executing this code:
-export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 
 # append configuration to .bash_profile:
