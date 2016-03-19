@@ -16,6 +16,7 @@ sleep 5
 echo "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
 # ... and start ZooKeeper container (for communication between docker VMs)
 docker run -d --restart=always \
+  -p 2181:2181 \
   -v /var/lib/zookeeper:/var/lib/zookeeper \
   -v /var/log/zookeeper:/var/log/zookeeper  \
   -v $(readlink -m zookeeper.cfg):$WORKDIR/zookeeper.cfg  \
