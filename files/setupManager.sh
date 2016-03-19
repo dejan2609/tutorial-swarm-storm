@@ -16,10 +16,10 @@ sleep 5
 cat "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
 # ... and start ZooKeeper container (for communication between docker VMs)
 docker run -d --restart=always \
-  # bind volumes for persistence
+  # bind volumes for persistence \
   -v /var/lib/zookeeper:/var/lib/zookeeper \
   -v /var/log/zookeeper:/var/log/zookeeper  \
-  # bind config file for multi-node ensemble
+  # bind config file for multi-node ensemble \
   -v $(readlink -m zookeeper.cfg):zookeeper.cfg  \
   jplock/zookeeper
 
