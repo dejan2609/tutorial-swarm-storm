@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 export SUPERVISORS="$1"
+STORM_VERSION=apache-storm-0.9.5
 
 # Not supported, yet
 ZOOKEEPERNODES=$2
@@ -26,6 +27,7 @@ docker run \
     --restart=always \
     --name ui \
     -p 8080:8080 \
+    -e STORM_VERSION=$STORM_VERSION \
     -v /home/ubuntu/files:/mnt/storm \
     baqend/storm ui
 # start Storm Nimbus container
@@ -36,6 +38,7 @@ docker run \
     --restart=always \
     --name nimbus \
     -p 6627:6627 \
+    -e STORM_VERSION=$STORM_VERSION \
     -v /home/ubuntu/files:/mnt/storm \
     baqend/storm nimbus
 # start Storm Supervisor container; they don't have to be named and you can just spawn as many as you like :-)
@@ -51,6 +54,7 @@ do
         --label cluster=storm \
         --net stormnet \
         --restart=always \
-    -v /home/ubuntu/files:/mnt/storm \
+        -e STORM_VERSION=$STORM_VERSION \
+        -v /home/ubuntu/files:/mnt/storm \
         baqend/storm supervisor
 done
