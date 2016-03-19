@@ -13,14 +13,12 @@ echo "Now let's wait a few moments"
 sleep 5
 
 # write the ZooKeeper config into a file ...
-cat "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
+echo "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
 # ... and start ZooKeeper container (for communication between docker VMs)
 docker run -d --restart=always \
-  # bind volumes for persistence \
   -v /var/lib/zookeeper:/var/lib/zookeeper \
   -v /var/log/zookeeper:/var/log/zookeeper  \
-  # bind config file for multi-node ensemble \
-  -v $(readlink -m zookeeper.cfg):zookeeper.cfg  \
+  -v $(readlink -m zookeeper.cfg):$WORKDIR/zookeeper.cfg  \
   jplock/zookeeper
 
 # start docker swarm management container
