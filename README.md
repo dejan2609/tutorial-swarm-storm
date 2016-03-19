@@ -11,27 +11,66 @@ Both the tutorial with all resources and the Docker image we use to deploy Storm
 
 ### Outline
 
-We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll directly get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy your very Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks like checking cluster health or listing containers (Docker) and remote topology deployment (Storm) in the process. But you do not have to copy-paste all commands from this tutorial into the shell: We have prepaired a [GitHub repository](https://github.com/Baqend/tutorial-swarm-storm) with bash scripts for all this.  
-Finally, we will briefly point out some issues that are ignored in this tutorial for the sake of simplicity, but have to be addressed in production.
+We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll directly get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy your very Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks like checking cluster health or listing containers (Docker) and remote topology deployment (Storm) in the process. But you do not have to copy-paste all commands from this tutorial into the shell: We have prepaired a [GitHub repository](https://github.com/Baqend/tutorial-swarm-storm) with bash scripts for all this and will reference the corresponding script as we go along.  
+Finally, we will briefly point out some issues that are ignored in this tutorial for the sake of simplicity, but have to be addressed in production and list some interesting reads.
 
+### Overview: Deployment
 
-### Overview:  Deployment
-
+The gist of what makes Docker Swarm so awesome is that it feels like using plain Docker 
 The illustration below shows our tutorial deployment:
 
 ![An overview of our tutorial deployment.](overview.PNG)
 
-We will
+We'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, will only talk to one of the machines, though and it will  just feel likehaving a plane Docker daemon
 
 First, we install Docker as described here [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/)
 
-## Setting up Docker Swarm
-### Preparation
+## Step-By-Step
+
+### Preparations
+1. First, spin up 3 Ubuntu Server 14.04 machines.
+2. Look up their IP addresses. We'll just refer to them by `%IP1`, `%IP2` and `%IP3`, respectively.
+3. :
+### Install Docker on every machine
+1. On every machine, [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/):
+
+		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
+		&& echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee -a /etc/apt/sources.list.d/docker.list \
+		&& sudo apt-get update && sudo apt-get purge lxc-docker && sudo apt-cache policy docker-engine \
+		&& sudo apt-get update -y && sudo  apt-get install -y linux-image-extra-$(uname -r) apparmor docker-engine git make
+
+2. To be able to call the Docker client without `sudo`, add the current user to the Docker user group:
+
+		sudo usermod -aG docker $(whoami)
+**Note:** These changes won't affect the current session.
+3. If you want to take a snapshot of this machine with a ready-to-go Docker installation, stop the docker daemon, delete the key file that Docker uses to identify each Docker Swarm worker (Docker will generate a new one on restart) and shut down the machine before taking the snapshot:
+
+			sudo service docker stop \
+			&& sudo rm /etc/docker/key.json \
+			&& sudo shutdown -h now
+If you want to install Docker manually on all machines, you can just reboot to apply user group changes, instead:
+
+		sudo reboot
+**Note:** If you don't remove the key file before taking the snapshot, all machines spawned from this image will have the same identifier and you'll have a broken Swarm cluster.  
+### Create the Swarm cluster
+
+Next, you will be setting up the Swarm cluster. To this end you'll connect to one of the Ubuntu servers, start a ZooKeeper server for Swarm coordination, a Swarm manager and a Swarm worker container.
+
+1. Connect to `Ubuntu 1` via SSH.
+2. Perform a quick health check. If Docker is installed correctly, the following will print a hello-world message:
+
+		docker run hello-world
+3. 
+
+### Add worker nodes to the Swarm cluster
+
+
+### Deploy the Storm cluster
 
 
 
-
-
+### 
+#### 
 
 
 ## TL; DR
@@ -44,7 +83,7 @@ If you are of the impatient kind or just want to see some results before diving 
 
             sudo apt-get install git -y && \
             git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-            bash tutorial-swarm-storm/files/prepare.sh
+            bash tutorial-swarm-storm/files/prepare.sh 
 If you want Swarm to use an already-existing ZooKeeper deployment, you can provide a single IP or a comma-separated list of IPs as an argument to the `bash files/prepare.sh` call. By default, our script will spawn a  ZooKeeper Docker container on `Ubuntu 1` for Swarm Coordination.
  2. **Remember the IP**: When done, the script prints your IP in vivid green (e.g. `SWARM_ZOOKEEPER=10.10.100.26`) -- remember it!
  3. **Set up Swarm cluster**: After reboot, log in via SSH again and invoke the Swarm manager script:

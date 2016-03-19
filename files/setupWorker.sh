@@ -6,5 +6,18 @@ echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 -H unix:///var/run/docker.sock --c
 sudo service docker restart
 echo "Now let's wait a few moments"
 sleep 5
+
+
+# write the ZooKeeper config into a file
+cat $ZOOKEEPER_CONFIG | tee zookeeper.cfg
+
+# start ZooKeeper container (for communication between docker VMs)
+docker run -d --restart=always \
+  # bind volumes for persistence
+  -v /var/lib/zookeeper:/var/lib/zookeeper \
+  -v /var/log/zookeeper:/var/log/zookeeper  \
+  -v $(readlink -m zookeeper.cfg):zookeeper.cfg  \
+  jplock/zookeeper
+
 # now make this machine join the Docker Swarm cluster:
 docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS

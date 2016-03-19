@@ -13,7 +13,7 @@ export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk 
 if [ $# -eq 0 ] || [ -z "$ZOOKEEPER_SERVERS" ]
 then
     # If no arguments are supplied, just assume this server to be the only ZooKeeper server
-    read -p "Please provide ZooKeeper server IPs like \"1.2.3.4\" or \"1.2.3.4,5.6.7.8\" or leave empty to use only this server!\n" ZOOKEEPER_SERVERS
+    read -p "Please provide ZooKeeper server IPs like \"1.2.3.4\" or \"1.2.3.4,5.6.7.8\" or leave empty to use only this server!"$'\n' ZOOKEEPER_SERVERS
     # use $PRIVATE_IP
     if [ -z "$ZOOKEEPER_SERVERS" ]
     then
@@ -33,7 +33,6 @@ ZOOKEEPER_ID=""
 ZOOKEEPER_CLUSTERSIZE=0
 for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
 do
-    echo "$index ${ZOOKEEPER_SERVERS_ARRAY[index]}"
     if [ "${ZOOKEEPER_SERVERS_ARRAY[index]}" == "$PRIVATE_IP" ]
     then
         ZOOKEEPER_ID=$index
@@ -43,11 +42,27 @@ done
 export ZOOKEEPER_ID=$ZOOKEEPER_ID
 export ZOOKEEPER_CLUSTERSIZE=$ZOOKEEPER_CLUSTERSIZE
 
+# now build the ZooKeeper configuration file:
+read -r -d '' ZOOKEEPER_CONFIG <<'EOF'
+tickTime=2000
+dataDir=/var/lib/zookeeper/
+dataLogDir=/var/log/zookeeper/
+clientPort=2181
+initLimit=5
+syncLimit=2
+EOF
+# now append information on every ZooKeeper node:
+for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
+do
+    ZOOKEEPER_CONFIG="$ZOOKEEPER_CONFIG"$'\n'"server.$index=${ZOOKEEPER_SERVERS_ARRAY[index]}:2888:3888"
+done
+
 echo "PRIVATE_IP: $PRIVATE_IP"
 echo "ZOOKEEPER_SERVERS: $ZOOKEEPER_SERVERS"
 echo "ZOOKEEPER_SERVERS_ARRAY: $ZOOKEEPER_SERVERS_ARRAY"
 echo "ZOOKEEPER_ID: $ZOOKEEPER_ID"
 echo "ZOOKEEPER_CLUSTERSIZE: $ZOOKEEPER_CLUSTERSIZE"
+echo "ZOOKEEPER_CONFIG: $ZOOKEEPER_CONFIG"
 
 if [ -z $ZOOKEEPER_ID ]
 then
