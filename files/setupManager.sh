@@ -30,11 +30,6 @@ docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOO
 echo "Now let's wait a few moments for the worker to come up"
 sleep 10
 
-
-# tell the docker client that the daemon running on this machine is the manager
-export DOCKER_HOST=tcp://127.0.0.1:2376
-echo "export DOCKER_HOST=tcp://127.0.0.1:2376" | tee -a ~/.bash_profile
-
 # create docker network spanning all VMs
 docker network create --driver overlay stormnet
 # show swarm info:
