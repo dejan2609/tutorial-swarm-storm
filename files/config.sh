@@ -55,7 +55,14 @@ EOF
 # now append information on every ZooKeeper node:
 for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
 do
-    ZOOKEEPER_CONFIG="$ZOOKEEPER_CONFIG"$'\n'"server.$(($index+1))=${ZOOKEEPER_SERVERS_ARRAY[index]}:2888:3888"
+    ZKID=$(($index+1))
+    ZKIP=${ZOOKEEPER_SERVERS_ARRAY[index]}
+    if [ $ZKID == $ZOOKEEPER_ID ]
+    then
+        # every ZooKeeper host has to specify its own IP as follows
+        ZKIP=0.0.0.0
+    fi
+    ZOOKEEPER_CONFIG="$ZOOKEEPER_CONFIG"$'\n'"server.$ZKID=$ZKIP:2888:3888"
 done
 
 echo << EOT
