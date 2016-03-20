@@ -20,8 +20,13 @@ docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOO
 echo "Now let's wait a few moments for the worker to come up"
 sleep 10
 
-# only the master should be able to talk to the swamp cluster:
+# only the master should be able to talk to the Swarm cluster:
 export DOCKER_HOST=tcp://127.0.0.1:2376
+cat << EOF | tee -a ~/.bash_profile
+
+# this node is the master and therefore should be able to talk to the Swarm cluster:
+export DOCKER_HOST=tcp://127.0.0.1:2376
+EOF
 
 # create docker network spanning all VMs
 docker network create --driver overlay stormnet
