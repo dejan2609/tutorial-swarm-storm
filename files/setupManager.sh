@@ -3,6 +3,8 @@
 # install Docker:
 . installDocker.sh
 
+exec su -l $USER
+
 # source parameters:
 . config.sh "$@"
 
