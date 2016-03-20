@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # install Docker:
-. installDocker.sh
+. files/installDocker.sh
 
 # default options for Docker Swarm:
 echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 -H unix:///var/run/docker.sock --cluster-advertise eth0:2375 --cluster-store zk://$ZOOKEEPER_SERVERS\"" | sudo tee /etc/default/docker
@@ -14,4 +14,4 @@ sleep 5
 docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
 
 # set up ZooKeeper:
-. setupZooKeeper.sh
+. files/setupZooKeeper.sh

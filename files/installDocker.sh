@@ -13,4 +13,4 @@ sudo service docker stop
 # delete the key file that is used by Docker to identify each Docker Swarm worker (you may take a snapshot as long as the key file is deleted and you haven't restarted the service):
 sudo rm /etc/docker/key.json
 
-echo "\nShutdown or reboot to apply user group changes!"
+echo "Shutdown or reboot to apply user group changes!"

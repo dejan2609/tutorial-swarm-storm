@@ -8,6 +8,8 @@ else
     # write the ZooKeeper config into a file ...
     echo "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
     # generate ZooKeeper ID file in the data directory:
+    sudo mkdir /var/lib/zookeeper
+    sudo mkdir /var/log/zookeeper
     echo "$ZOOKEEPER_ID" | sudo tee /var/lib/zookeeper/myid
     # ... and start ZooKeeper container (for communication between docker VMs)
     docker run -d --restart=always \
