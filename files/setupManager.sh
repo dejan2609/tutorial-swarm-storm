@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# install Docker:
+. installDocker.sh
+
+# source parameters:
+. config.sh "$@"
+
 # default options for Docker Swarm:
 echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
     -H unix:///var/run/docker.sock \
@@ -12,15 +18,8 @@ sudo service docker restart
 echo "Now let's wait a few moments"
 sleep 5
 
-# write the ZooKeeper config into a file ...
-echo "$ZOOKEEPER_CONFIG" | tee zookeeper.cfg
-# ... and start ZooKeeper container (for communication between docker VMs)
-docker run -d --restart=always \
-  -p 2181:2181 \
-  -v /var/lib/zookeeper:/var/lib/zookeeper \
-  -v /var/log/zookeeper:/var/log/zookeeper  \
-  -v $(readlink -m zookeeper.cfg):$WORKDIR/zookeeper.cfg  \
-  jplock/zookeeper
+# set up ZooKeeper:
+. setupZooKeeper.sh
 
 # start docker swarm management container
 docker run -d --label container=manager -p 2376:2375 --restart=always -v /etc/docker:/etc/docker swarm manage zk://$ZOOKEEPER_SERVERS

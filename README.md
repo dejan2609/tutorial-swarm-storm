@@ -21,29 +21,40 @@ The illustration below shows our tutorial deployment:
 
 ![An overview of our tutorial deployment.](overview.PNG)
 
-We'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, will only talk to one of the machines, though and it will  just feel likehaving a plane Docker daemon
-
-First, we install Docker as described here [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/)
+We'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, will only talk to one of the machines, though and it will  just feel like having a plane Docker daemon
 
 ## Step-By-Step
 
 ### Preparations
-1. First, spin up 3 Ubuntu Server 14.04 machines.
-2. Look up their IP addresses. We'll just refer to them by `%IP1`, `%IP2` and `%IP3`, respectively.
-3. :
-### Install Docker on every machine
-1. On every machine, [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/):
+First, spin up 3 Ubuntu Server 14.04 machines and look up their IP addresses. We'll just refer to them by `%IP1`, `%IP2` and `%IP3`, respectively.  
+Then do the following *on each Ubuntu machine*:
+
+1. Start by appending some config like the real values for `%IP1`, `%IP2` and `%IP3` and convenience `export` statements to `.bash_profile` to have them ready the next time you log in:
+
+		cat << EOF | tee -a ~/.bash_profile
+		# the IP addresses of all Swarm cluster machines, IP1 being the manager node
+		export IP1=%IP1
+		export IP2=%IP2
+		export IP3=%IP3
+
+		# find the IP address of the machine that is executing this code:
+		export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+		# all nodes in the ZooKeeper ensemble as comma-separated list
+		export ZOOKEEPER_SERVERS=$IP1,$IP2,$IP3
+		EOF
+**Note:** You'll have to fill in! 
+2. Then, [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/):
 
 		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
 		&& echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee -a /etc/apt/sources.list.d/docker.list \
 		&& sudo apt-get update && sudo apt-get purge lxc-docker && sudo apt-cache policy docker-engine \
 		&& sudo apt-get update -y && sudo  apt-get install -y linux-image-extra-$(uname -r) apparmor docker-engine git make
 
-2. To be able to call the Docker client without `sudo`, add the current user to the Docker user group:
+3. To be able to call the Docker client without `sudo`, add the current user to the Docker user group:
 
 		sudo usermod -aG docker $(whoami)
 **Note:** These changes won't affect the current session.
-3. If you want to take a snapshot of this machine with a ready-to-go Docker installation, stop the docker daemon, delete the key file that Docker uses to identify each Docker Swarm worker (Docker will generate a new one on restart) and shut down the machine before taking the snapshot:
+4. If you want to take a snapshot of this machine with a ready-to-go Docker installation, stop the docker daemon, delete the key file that Docker uses to identify each Docker Swarm worker (Docker will generate a new one on restart) and shut down the machine before taking the snapshot:
 
 			sudo service docker stop \
 			&& sudo rm /etc/docker/key.json \
@@ -52,6 +63,8 @@ If you want to install Docker manually on all machines, you can just reboot to a
 
 		sudo reboot
 **Note:** If you don't remove the key file before taking the snapshot, all machines spawned from this image will have the same identifier and you'll have a broken Swarm cluster.  
+
+
 ### Create the Swarm cluster
 
 Next, you will be setting up the Swarm cluster. To this end you'll connect to one of the Ubuntu servers, start a ZooKeeper server for Swarm coordination, a Swarm manager and a Swarm worker container.
