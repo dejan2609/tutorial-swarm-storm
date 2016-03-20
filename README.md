@@ -92,22 +92,21 @@ As mentioned above, we have published some scripts on GitHub to ease this entire
 
 1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3` with IP addresses `%IP1`, `%IP2` and `%IP3`, respectively. 
 2. **Connect via SSH**: Connect to all 3 machines via SSH.
-3. **Checkout GitHub**: On every machine, install git, check out the repository and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
+3. **Checkout GitHub**: On every machine, install git, check out the repository, change director and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
 
 		sudo apt-get install git -y && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
 		cd tutorial-swarm-storm && \
 		. files/prepare.sh %IP1,%IP2,%IP3
 The `prepare.sh` script will install docker, do some configuration and append some `export` statements to `~/.bash_profile` for convenience during the following installation steps. Finally, the script will reboot.
-4. **Reconnect**: After reboot, reconnect all 3 machines via SSH and and the tutorial repository  directory:
+4. **Set up ZooKeeper**: After reboot, reconnect to all 3 machines, enter the tutorial directory and call the `setupZooKeeper.sh` script:
 
-		cd ~\tutorial-swarm-storm
-5. **Set of ZooKeeper**: On every machine, call the `setup.sh` script:
-
-		. tutorial-swarm-storm/files/setup.sh
+		cd ~\tutorial-swarm-storm && \
+		. files/setupZooKeeper.sh
+This script will launch a ZooKeeper node and join the ensemble and will print a status message at the end. Do not proceed before all nodes in the ZooKeeper ensemble are up and running!
 5. **Set up Swarm**: On every machine, call the `setup.sh` script:
 
-		. tutorial-swarm-storm/files/setup.sh
+		. /files/setup.sh
 The script will automatically determine whether your machine is the master node or a pure worker node.
 1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3`. 
 2. **Setup Swarm Manager** on `Ubuntu 1`: 

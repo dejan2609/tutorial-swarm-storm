@@ -35,7 +35,8 @@ for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
 do
     if [ "${ZOOKEEPER_SERVERS_ARRAY[index]}" == "$PRIVATE_IP" ]
     then
-        ZOOKEEPER_ID=$index
+        # The ZooKeeper ID has to be a number between 1 and 255 --> add 1
+        ZOOKEEPER_ID=$(($index+1))
     fi
     ZOOKEEPER_CLUSTERSIZE=$(($ZOOKEEPER_CLUSTERSIZE + 1))
 done
@@ -54,7 +55,7 @@ EOF
 # now append information on every ZooKeeper node:
 for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
 do
-    ZOOKEEPER_CONFIG="$ZOOKEEPER_CONFIG"$'\n'"server.$index=${ZOOKEEPER_SERVERS_ARRAY[index]}:2888:3888"
+    ZOOKEEPER_CONFIG="$ZOOKEEPER_CONFIG"$'\n'"server.$(($index+1))=${ZOOKEEPER_SERVERS_ARRAY[index]}:2888:3888"
 done
 
 echo << EOT
