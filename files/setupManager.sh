@@ -5,6 +5,11 @@
 
 # source parameters:
 . files/config.sh "$@"
+# have the parameters sourced on every login:
+cat << EOF | tee -a ~/.bash_profile
+# source parameters:
+. $(readlink -m files/config.sh) $@
+EOF
 
 # default options for Docker Swarm:
 echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
