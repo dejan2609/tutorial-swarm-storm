@@ -12,7 +12,7 @@ else
     sudo mkdir /var/log/zookeeper
     echo "$ZOOKEEPER_ID" | sudo tee /var/lib/zookeeper/myid
     # ... and start ZooKeeper container (for communication between docker VMs)
-    sudo docker run -d --restart=always \
+    docker run -d --restart=always \
       -p 2181:2181 \
       -v /var/lib/zookeeper:/var/lib/zookeeper \
       -v /var/log/zookeeper:/var/log/zookeeper  \

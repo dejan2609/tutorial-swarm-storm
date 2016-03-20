@@ -88,8 +88,27 @@ Next, you will be setting up the Swarm cluster. To this end you'll connect to on
 
 ## TL; DR
 
-If you are of the impatient kind or just want to see some results before diving into Swarm, we prepared some fast-forward instructions:
+As mentioned above, we have published some scripts on GitHub to ease this entire ordeal. So if you want some quick results, he are the fast-forward instructions:
 
+1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3` with IP addresses `%IP1`, `%IP2` and `%IP3`, respectively. 
+2. **Connect via SSH**: Connect to all 3 machines via SSH.
+3. **Checkout GitHub**: On every machine, install git, check out the repository and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
+
+		sudo apt-get install git -y && \
+		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
+		cd tutorial-swarm-storm && \
+		. files/prepare.sh %IP1,%IP2,%IP3
+The `prepare.sh` script will install docker, do some configuration and append some `export` statements to `~/.bash_profile` for convenience during the following installation steps. Finally, the script will reboot.
+4. **Reconnect**: After reboot, reconnect all 3 machines via SSH and and the tutorial repository  directory:
+
+		cd ~\tutorial-swarm-storm
+5. **Set of ZooKeeper**: On every machine, call the `setup.sh` script:
+
+		. tutorial-swarm-storm/files/setup.sh
+5. **Set up Swarm**: On every machine, call the `setup.sh` script:
+
+		. tutorial-swarm-storm/files/setup.sh
+The script will automatically determine whether your machine is the master node or a pure worker node.
 1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3`. 
 2. **Setup Swarm Manager** on `Ubuntu 1`: 
  1.  **Configure and install Docker**: Connect to  `Ubuntu 1` via SSH and install git, check out our tutorial from GitHub and invoke the script that installs Docker:

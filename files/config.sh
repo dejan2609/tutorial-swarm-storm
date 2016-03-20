@@ -41,11 +41,6 @@ do
 done
 export ZOOKEEPER_ID=$ZOOKEEPER_ID
 export ZOOKEEPER_CLUSTERSIZE=$ZOOKEEPER_CLUSTERSIZE
-# the first server in the ZooKeeper server list is the Swarm managing node --> define the docker host only for that node!
-if [ $ZOOKEEPER_ID == "0" ]
-then
-    export WHATEVER=tcp://"${ZOOKEEPER_SERVERS_ARRAY[0]}":2376
-fi
 
 # now build the ZooKeeper configuration file:
 read -r -d '' ZOOKEEPER_CONFIG <<'EOF'
