@@ -29,5 +29,3 @@ docker network create --driver overlay stormnet
 docker info
 # show network info
 docker network ls
-
-sudo reboot
