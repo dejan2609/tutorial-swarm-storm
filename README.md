@@ -1,11 +1,6 @@
 # Whalenado: A Tutorial on Deploying Apache Storm with Docker Swarm
 
 For our upcoming **query caching and continuous query** features, we rely on [Apache Storm](http://storm.apache.org/) for low-latency data processing. Several projects have dedicated themselves to enabling multi-server Storm deployments on top of Docker (e.g. [wurstmeister/storm-docker](https://github.com/wurstmeister/storm-docker) or [viki-org/storm-docker](https://github.com/viki-org/storm-docker)), but scaling beyond server-limits always seems to make things complicated. Since scalability and ease-of-operation is key for our deployment, we have adopted Docker Swarm from the beginning and are very happy with how smoothly everything is humming along. With this tutorial, we'd like to share our experiences, raise your interest in **Baqend Real-Time API** we'll be releasing soon and ultimately increase the hype for Docker Swarm (because it is just awesome!) :-)
-
-Both the tutorial with all resources and the Docker image we use to deploy Storm in production are available under the very permissive *Chicken Dance License v0.2*:
-
-- **baqend/storm Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/storm/) and [GitHub](https://github.com/Baqend/docker-storm)
-- **tutorial with scripts etc.** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
  
 ## What we are going to do
 
@@ -112,16 +107,20 @@ This script will launch a ZooKeeper node, have it join the ZooKeeper ensemble an
        	. files/util/startStorm.sh 3
 5. **Deploy a Topology**: 
 
-## Limitations (a.k.a. "Why this is not production-ready")
-In this tutorial, we demonstrate how easy it can be to get a distributed Storm cluster up and running using Docker. However, we did not consider a number of operational issues that are pivotal to availability, fault-tolerance and security, for example
+## Limitations (a.k.a. "Missing Features")
+In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker. However, we did not consider a number of operational issues that are pivotal to availability, fault-tolerance and security. In order to make this production-ready, you should definitely look into the following: 
 
-- [Protecting the Docker daemon Socket with HTTPS](https://docs.docker.com/v1.5/articles/https/)
-- [Using a DNS to managed ZooKeeper servers](): In this tutorial, we identified ZooKeeper servers by IP address. However, this implies that a failed server can only be replaced by another server with *the same IP*. This is definitely not a desirable dependency and therefore you should set up a DNS server and use DNS names to identify ZooKeeper servers in the config files.
-- []()
-
-
-## Further Reading
-- [Build a Swarm cluster for production](https://docs.docker.com/swarm/install-manual/)
+- **HTTPS between Swarm nodes**: In order to prevent the complexity of this tutorial to going through the roof, we let out how to [configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/). However, it is definitely critical for security!
+- **DNS for ZooKeeper**: When going production, we strongly recommend employing a DNS and using *hostnames instead of IP addresses* when setting up the ZooKeeper ensemble. Using IP addresses (as we do in this tutorial) implies that a failed ZooKeeper node can only be replaced by another node with *the same IP*. This is definitely not a desirable dependency! 
 
 
+## Closing Remarks
 
+Both the tutorial with all resources and the Docker image we use to deploy Storm in production are available under the very permissive *Chicken Dance License v0.2*:
+
+- **baqend/storm Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/storm/) and [GitHub](https://github.com/Baqend/docker-storm)
+- **tutorial with scripts etc.** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
+
+Please feel free to fork us on GitHub or file a pull request if you have any suggestions for further improvement! 
+ 
+We hope you enjoyed this tutorial and leave us some feedback in the comments section below

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# this field specifies whether a particular version of the baqend/storm docker image should be pulled; leave empty for latest
+VERSION=:snapshot
+
 #The first argument provided to the script is the number of supervisors to deploy:
 export SUPERVISORS="$1"
 STORM_VERSION=apache-storm-0.9.5
@@ -37,7 +40,7 @@ docker run \
     -p 8080:8080 \
     -e STORM_VERSION=$STORM_VERSION \
     -v $(readlink -m files/stormhome):/mnt/storm \
-    baqend/storm ui
+    baqend/storm$VERSION ui
 # start Storm Nimbus container
 docker run \
     -d \
@@ -49,7 +52,7 @@ docker run \
     -p 6627:6627 \
     -e STORM_VERSION=$STORM_VERSION \
     -v $(readlink -m files/stormhome):/mnt/storm \
-    baqend/storm nimbus
+    baqend/storm$VERSION nimbus
 # start Storm Supervisor container; they don't have to be named and you can just spawn as many as you like :-)
 
 if ! [[ $SUPERVISORS =~ ^[0-9]+ ]] ; then
@@ -65,5 +68,5 @@ do
         --restart=always \
         -e STORM_VERSION=$STORM_VERSION \
         -v $(readlink -m files/stormhome):/mnt/storm \
-        baqend/storm supervisor
+        baqend/storm$VERSION supervisor
 done

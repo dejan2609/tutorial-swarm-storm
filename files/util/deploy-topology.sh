@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # the first parameter has to be the ABSOLUTE path to the topology fatjar --> let's make it absolute!
-JARFILE=$(readlink -m $1)
+JARFILE=$1
 
 # the second argument is the remote nimbus's IP address or name
 NIMBUS=$2
@@ -9,7 +9,7 @@ NIMBUS=$2
 # All parameters from here on are for the topology (i.e. main class etc.)
 
 # We will create a temporary storm.yaml file to pass the docker container
-FILE=storm.yaml.temp.isonthisfileshouldhavebeendeletedsogoaheadanddeletedifyoufindit
+FILE=storm.yaml.temp.thisfileshouldhavebeendeletedsogoaheadanddeleteitifyouseeit
 # create temporary storm.yaml file
 cat << EOF | tee $FILE
 nimbus.host: "$NIMBUS"
@@ -19,7 +19,7 @@ EOF
 docker run \
    -it \
    --rm \
-   -v $JARFILE:/topology.jar \
+   -v $(readlink -m $1):/topology.jar \
    -v $(readlink -m $FILE):/mnt/storm/conf/storm.yaml \
    baqend/storm \
    jar /topology.jar "${@:3}"
