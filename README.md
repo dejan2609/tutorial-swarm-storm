@@ -92,47 +92,24 @@ As mentioned above, we have published some scripts on GitHub to ease this entire
 
 1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3` with IP addresses `%IP1`, `%IP2` and `%IP3`, respectively. 
 2. **Connect via SSH**: Connect to all 3 machines via SSH.
-3. **Checkout GitHub**: On every machine, install git, check out the repository, change director and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
+3. **Setup phase 1**: On every machine, install git, check out the repository, change director and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
 
 		sudo apt-get install git -y && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
 		cd tutorial-swarm-storm && \
 		. files/prepare.sh %IP1,%IP2,%IP3
 The `prepare.sh` script will install docker, do some configuration and append some `export` statements to `~/.bash_profile` for convenience during the following installation steps. Finally, the script will reboot.
-4. **Set up ZooKeeper**: After reboot, reconnect to all 3 machines, enter the tutorial directory and call the `setupZooKeeper.sh` script:
+4. **Setup phase 2**: After reboot, reconnect to all 3 machines, enter the tutorial directory and call the `setup.sh` script:
 
-		cd ~\tutorial-swarm-storm && \
-		. files/setupZooKeeper.sh
-This script will launch a ZooKeeper node and join the ensemble and will print a status message at the end. Do not proceed before all nodes in the ZooKeeper ensemble are up and running!
-5. **Set up Swarm**: On every machine, call the `setup.sh` script:
+		cd tutorial-swarm-storm && \
+		. files/setup.sh
+This script will launch a ZooKeeper node, have it join the ZooKeeper ensemble and then wait for the other ZooKeeper nodes. When the ZooKeeper ensemble is complete, the script proceeds with the installation: When executed on `Ubuntu 1`, it will setup the Swarm manager and a pure worker on node otherwise.
+4. **Create an overlay network**: On the Swarm manager machine (`Ubuntu 1`), make sure you are in the `tutorial-swarm-storm` directory and call the `createNetwork.sh` script to create a network that spans all swarm nodes and have the running ZooKeeper containers join it:
 
-		. /files/setup.sh
-The script will automatically determine whether your machine is the master node or a pure worker node.
-1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3`. 
-2. **Setup Swarm Manager** on `Ubuntu 1`: 
- 1.  **Configure and install Docker**: Connect to  `Ubuntu 1` via SSH and install git, check out our tutorial from GitHub and invoke the script that installs Docker:
+       	. files/createNetwork.sh
+4. **Start the Storm Cluster**: Again, on the Swarm manager make sure you are in the `tutorial-swarm-storm` directory and call the Storm launcher script. You can specify the desired number of supervisors as argument to the script:
 
-            sudo apt-get install git -y && \
-            git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-            bash tutorial-swarm-storm/files/prepare.sh 
-If you want Swarm to use an already-existing ZooKeeper deployment, you can provide a single IP or a comma-separated list of IPs as an argument to the `bash files/prepare.sh` call. By default, our script will spawn a  ZooKeeper Docker container on `Ubuntu 1` for Swarm Coordination.
- 2. **Remember the IP**: When done, the script prints your IP in vivid green (e.g. `SWARM_ZOOKEEPER=10.10.100.26`) -- remember it!
- 3. **Set up Swarm cluster**: After reboot, log in via SSH again and invoke the Swarm manager script:
-
-            . tutorial-swarm-storm/files/setupManager.sh
-3. **Setup Swarm Workers**: You now have a running Cluster with a Single Worker Node on `Ubuntu 1`. To add more nodes to the Cluster, do the following:
-	1. Similar to above, you have to configure and install Docker on `Ubuntu 2` and  `Ubuntu 3`. However, this time you *have to* provide the `prepare.sh` script with information on the ZooKeeper cluster used for coordination, for example like this:
-
-            sudo apt-get install git -y && \
-            git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-            bash tutorial-swarm-storm/files/prepare.sh 10.10.100.26 && \
-            sudo reboot
-	2. After reboot, log in via SSH again, and invoke the Swarm *worker* script:
-
-            . tutorial-swarm-storm/files/setupWorker.sh
-4. **Start the Storm Cluster**: Log into the Swarm manager machine (`Ubuntu 1`) and call the Storm launcher script. You can specify the desired number of supervisors as argument to the script:
-
-       . tutorial-swarm-storm/files/util/startStorm.sh 3
+       	. files/util/startStorm.sh 3
 5. **Deploy a Topology**: 
 
 ## Limitations (a.k.a. "Why this is not production-ready")
