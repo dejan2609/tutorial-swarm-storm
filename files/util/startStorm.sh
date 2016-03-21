@@ -1,29 +1,54 @@
 #!/usr/bin/env bash
 
+#The first argument provided to the script is the number of supervisors to deploy:
 export SUPERVISORS="$1"
 STORM_VERSION=apache-storm-0.9.5
+
+# create storm config file: files/stormhome/conf/storm.yaml
+read -r -d '' STORM_CONFIG <<'EOF'
+nimbus.host: "nimbus"
+
+supervisor.slots.ports:
+- 6700
+- 6701
+- 6702
+- 6703
+
+storm.zookeeper.servers:
+EOF
+# add all Zookeeper servers:
+for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"
+do
+    ZKID=$(($index+1))
+    STORM_CONFIG="$STORM_CONFIG"$'\n'"- \"zk$ZKID\""
+done
+# write config file:
+echo "$STORM_CONFIG" | tee files/stormhome/conf/storm.yaml
+
 
 # start Storm UI container
 docker run \
     -d  -it \
+    --label cluster=storm \
     -e constraint:server==manager \
     --net stormnet \
     --restart=always \
     --name ui \
     -p 8080:8080 \
     -e STORM_VERSION=$STORM_VERSION \
-    -v /home/ubuntu/files:/mnt/storm \
+    -v $(readlink -m files/stormhome):/mnt/storm \
     baqend/storm ui
 # start Storm Nimbus container
 docker run \
     -d \
+    --label cluster=storm \
     -e constraint:server==manager \
     --net stormnet \
     --restart=always \
     --name nimbus \
     -p 6627:6627 \
     -e STORM_VERSION=$STORM_VERSION \
-    -v /home/ubuntu/files:/mnt/storm \
+    -v $(readlink -m files/stormhome):/mnt/storm \
     baqend/storm nimbus
 # start Storm Supervisor container; they don't have to be named and you can just spawn as many as you like :-)
 
@@ -39,6 +64,6 @@ do
         --net stormnet \
         --restart=always \
         -e STORM_VERSION=$STORM_VERSION \
-        -v /home/ubuntu/files:/mnt/storm \
+        -v $(readlink -m files/stormhome):/mnt/storm \
         baqend/storm supervisor
 done

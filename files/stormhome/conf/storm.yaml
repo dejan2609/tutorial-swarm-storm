@@ -1,6 +1,9 @@
+nimbus.host: "nimbus"
+
 storm.zookeeper.servers:
     - "zk1"
-nimbus.host: "nimbus"
+    - "zk2"
+    - "zk3"
 
 supervisor.slots.ports:
 - 6700
