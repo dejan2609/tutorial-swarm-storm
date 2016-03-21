@@ -28,9 +28,49 @@ cat << EOF | tee -a ~/.bash_profile
 export DOCKER_HOST=tcp://127.0.0.1:2376
 EOF
 
-# create docker network spanning all VMs
-docker network create --driver overlay stormnet
 # show swarm info:
 docker info
-# show network info
-docker network ls
+# should look something like this:
+#    Containers: 7
+#      Running: 7
+#      Paused: 0
+#      Stopped: 0
+#    Images: 6
+#    Server Version: swarm/1.1.3
+#    Role: primary
+#    Strategy: spread
+#    Filters: health, port, dependency, affinity, constraint
+#    Nodes: 3
+#      docker1: 10.10.100.26:2375
+#       └ Status: Healthy
+#       └ Containers: 3
+#       └ Reserved CPUs: 0 / 1
+#       └ Reserved Memory: 0 B / 2.053 GiB
+#       └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, server=manager, storagedriver=devicemapper
+#       └ Error: (none)
+#       └ UpdatedAt: 2016-03-20T22:22:22Z
+#      docker2: 10.10.100.27:2375
+#       └ Status: Healthy
+#       └ Containers: 2
+#       └ Reserved CPUs: 0 / 1
+#       └ Reserved Memory: 0 B / 2.053 GiB
+#       └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, storagedriver=devicemapper
+#       └ Error: (none)
+#       └ UpdatedAt: 2016-03-20T22:21:48Z
+#      docker3: 10.10.100.28:2375
+#       └ Status: Healthy
+#       └ Containers: 2
+#       └ Reserved CPUs: 0 / 1
+#       └ Reserved Memory: 0 B / 2.053 GiB
+#       └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, storagedriver=devicemapper
+#       └ Error: (none)
+#       └ UpdatedAt: 2016-03-20T22:22:33Z
+#    Plugins:
+#      Volume:
+#      Network:
+#    Kernel Version: 3.13.0-40-generic
+#    Operating System: linux
+#    Architecture: amd64
+#    CPUs: 3
+#    Total Memory: 6.159 GiB
+#    Name: 542da9735bcd
