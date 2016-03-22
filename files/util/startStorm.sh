@@ -22,6 +22,7 @@ do
     STORM_CONFIG="$STORM_CONFIG"$'\n'"- \"zk$ZKID\""
 done
 # write config file:
+mkdir -p files/stormhome/conf
 echo "$STORM_CONFIG" | tee files/stormhome/conf/storm.yaml
 
 
