@@ -23,7 +23,7 @@ do
 done
 # write config file:
 sudo mkdir -p files/stormhome/conf
-echo "$STORM_CONFIG" | tee files/stormhome/conf/storm.yaml
+echo "$STORM_CONFIG" | sudo tee files/stormhome/conf/storm.yaml
 
 
 # start Storm UI container
