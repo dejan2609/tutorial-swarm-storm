@@ -107,6 +107,8 @@ This script will launch a ZooKeeper node, have it join the ZooKeeper ensemble an
        	. files/util/startStorm.sh 3
 5. **Deploy a Topology**: 
 
+       	. files/util/deploy-topology.sh
+
 ## Limitations (a.k.a. "Missing Features")
 In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker. However, we did not consider a number of operational issues that are pivotal to availability, fault-tolerance and security. In order to make this production-ready, you should definitely look into the following: 
 
@@ -123,4 +125,4 @@ Both the tutorial with all resources and the Docker image we use to deploy Storm
 
 Please feel free to fork us on GitHub or file a pull request if you have any suggestions for further improvement! 
  
-We hope you enjoyed this tutorial and leave us some feedback in the comments section below
+We hope you enjoyed this tutorial and leave us some feedback in the comments section below!
