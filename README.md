@@ -21,23 +21,21 @@ We'll have 3 machines running Ubuntu Server 14.04, each of which will be running
 ## Step-By-Step
 
 ### Preparations
-First, spin up 3 Ubuntu Server 14.04 machines and look up their IP addresses. We'll just refer to them by `%IP1`, `%IP2` and `%IP3`, respectively.  
-Then do the following *on each Ubuntu machine*:
+First, get hold of 3 Ubuntu Server 14.04 machines and look up their IP addresses, because you will need them later. 
 
-1. Start by appending some config like the real values for `%IP1`, `%IP2` and `%IP3` and convenience `export` statements to `.bash_profile` to have them ready the next time you log in:
+In order to make this entire procedure not too repetitive, we'll do the preparation steps on only one of them, shut it down and take a snapshot. We will then create the other machines from this snapshot.  
+So let's begin:
+
+1. Connect to one of the VMs via SSH.
+2. First, append two export statement to `~/.bash_profile` which you will need later:
 
 		cat << EOF | tee -a ~/.bash_profile
-		# the IP addresses of all Swarm cluster machines, IP1 being the manager node
-		export IP1=%IP1
-		export IP2=%IP2
-		export IP3=%IP3
-
-		# find the IP address of the machine that is executing this code:
-		export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-		# all nodes in the ZooKeeper ensemble as comma-separated list
-		export ZOOKEEPER_SERVERS=$IP1,$IP2,$IP3
+		# the servers in the ZooKeeper ensemble
+		export ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28
+		# the IP address of this machine:
+		export PRIVATE_IP=\$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print \$1}')
 		EOF
-**Note:** You'll have to fill in! 
+Of course, you'll have to fill in the right IP addresses (or even better: hostnames). For reference, we provided some example values.
 2. Then, [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/):
 
 		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
@@ -48,27 +46,66 @@ Then do the following *on each Ubuntu machine*:
 3. To be able to call the Docker client without `sudo`, add the current user to the Docker user group:
 
 		sudo usermod -aG docker $(whoami)
-**Note:** These changes won't affect the current session.
-4. If you want to take a snapshot of this machine with a ready-to-go Docker installation, stop the docker daemon, delete the key file that Docker uses to identify each Docker Swarm worker (Docker will generate a new one on restart) and shut down the machine before taking the snapshot:
+These changes won't affect the current session.
+4. Since docker uses a key file to identify individual docker daemons, you now have to stop the docker daemon, delete the key file (Docker will generate a new one after restart) and shut down the machine before taking the snapshot:
 
-			sudo service docker stop \
-			&& sudo rm /etc/docker/key.json \
-			&& sudo shutdown -h now
-If you want to install Docker manually on all machines, you can just reboot to apply user group changes, instead:
+		sudo service docker stop \
+		&& sudo rm /etc/docker/key.json
+**Note:** If you don't remove the key file before taking the snapshot, all machines spawned from this image will have the same identifier and you'll end up a broken Swarm cluster.  
+5. Now you are almost done. The only thing left to do is to prepare the machine in such a way that it will become a Swarm worker the next time it boots. To this end, create file `/etc/init.sh` with an editor like nano
 
-		sudo reboot
-**Note:** If you don't remove the key file before taking the snapshot, all machines spawned from this image will have the same identifier and you'll have a broken Swarm cluster.  
+		sudo nano /etc/init.sh
+and then paste the following and save:
+
+		# the servers in the ZooKeeper ensemble
+		export ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28
+
+		# the IP address of this machine:
+		export PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+
+		# define default options for Docker Swarm:
+		echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
+		    -H unix:///var/run/docker.sock \
+		    --cluster-advertise eth0:2375 \
+		    --cluster-store \
+		    zk://$ZOOKEEPER_SERVERS\"" \
+		| sudo tee /etc/default/docker
+
+		# restart the service to apply new options:
+		sudo service docker restart
+
+		# make this machine join the Docker Swarm cluster:
+		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
+**Note:** You'll have to fill in the right IP addresses or hostnames here as well.
+6. But you still have to ensure that the script is only executed *once* when you spawn each Ubuntu server machine. You can choose from at least three options:
+	1. The easy way is to provide the script call (`/bin/bash /etc/init.sh`) as an init/customisation script.
+	2. A more fragile way is to add the script call to `/etc/rc.local` and have the script itself remove it on execution like so:
+
+			sudo sed -i -e "s/exit 0$/\/bin\/bash \/etc\/init.sh\nexit 0/g" /etc/rc.local \
+			&& cat << EOF | sudo tee -a /etc/init.sh
+				# finally comment out the script call in /etc/rc.local, so that it isn't executed again
+				sudo sed -i -e "s/\/bin\/bash \/etc\/init.sh\n//g" /etc/rc.local
+			EOF
+	3. You can also, of course, just connect to each machine and call the script manually *after you have spawned all machines*.
+5. Whichever you have chosen above, it is now time to shut down the machine:
+
+		sudo shutdown -h now
+6. Finally, take a snapshot of the machine, rebuild the other servers from this image and restart the machine you have taken the image from. For those who did not choose the somewhat hacky Option 2: Don't forget to make sure the  init script is called!
+
+
+Time to get to the interesting stuff!
+
 
 
 ### Create the Swarm cluster
 
-Next, you will be setting up the Swarm cluster. To this end you'll connect to one of the Ubuntu servers, start a ZooKeeper server for Swarm coordination, a Swarm manager and a Swarm worker container.
+If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. Every machine is already set up to become a Swarm worker node eventually, but you still have to se tup the ZooKeeper ensemble and the Swarm manager for coordination. However, you'll only have to talk to the manager node from this point on:
 
-1. Connect to `Ubuntu 1` via SSH.
-2. Perform a quick health check. If Docker is installed correctly, the following will print a hello-world message:
+1. You choose `Ubuntu 1` to become the manager node and connect to it via SSH.
+2. Perform a quick health check. If Docker is installed correctly, the following will show you a list of the running Docker containers (that should be exactly 1 for Swarm and nothing else):
 
-		docker run hello-world
-3. 
+		docker ps
+3. Since we are going to work with this node
 
 ### Add worker nodes to the Swarm cluster
 
