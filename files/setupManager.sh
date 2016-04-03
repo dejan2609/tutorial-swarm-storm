@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+if [ $PRIVATE_IP == "10.10.100.26" ];then echo "yes"; else echo "no";fi
+
 
 # default options for Docker Swarm:
 echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
@@ -7,8 +9,10 @@ echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
     --label server=manager \
     --cluster-advertise eth0:2375 \
     --cluster-store zk://$ZOOKEEPER_SERVERS\"" \
-| sudo tee /etc/default/docker \
-&& sudo service docker restart
+| sudo tee /etc/default/docker
+
+# restart the service to apply new options:
+sudo service docker restart
 
 # start docker swarm management container
 docker run -d --label container=manager -p 2376:2375 --restart=always -v /etc/docker:/etc/docker swarm manage zk://$ZOOKEEPER_SERVERS
