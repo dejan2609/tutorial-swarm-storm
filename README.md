@@ -276,7 +276,7 @@ Since every Storm-related container is marked with the label (`cluster=storm`), 
 
 ## Don't Forget About Security!
 
-In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node ZooKeeper ensemble for high availability and fault-tolerance. In order to prevent the complexity of this tutorial from going through the roof, though, we let out how to **[configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/)**. If you are planning to use Docker Swarm in a business-critical application, you should definitely put some effort into this aspect of deployment! 
+In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node ZooKeeper ensemble for high availability and fault-tolerance. In order to prevent the complexity of this tutorial from going through the roof, though, we stepped over how to **[configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/)**. If you are planning to use Docker Swarm in a business-critical application, you should definitely put some effort into this aspect of deployment! 
 
 ## Closing Remarks
 
