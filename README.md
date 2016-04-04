@@ -1,12 +1,12 @@
-# Whalenado: A Tutorial on Deploying Apache Storm with Docker Swarm
+# A Tutorial on Deploying Apache Storm with Docker Swarm
 
 For our upcoming **query caching and continuous query** features, we rely on [Apache Storm](http://storm.apache.org/) for low-latency data processing. Several projects have dedicated themselves to enabling multi-server Storm deployments on top of Docker (e.g. [wurstmeister/storm-docker](https://github.com/wurstmeister/storm-docker) or [viki-org/storm-docker](https://github.com/viki-org/storm-docker)), but scaling beyond server-limits always seems to make things complicated. Since scalability and ease-of-operation is key for our deployment, we have adopted Docker Swarm from the beginning and are very happy with how smoothly everything is humming along. With this tutorial, we'd like to share our experiences, raise your interest in the **Baqend Real-Time API** we'll be releasing soon and ultimately increase the hype for Docker Swarm (because it is just awesome!) :-)
  
-## What we are going to do
+## What We Are Going to Do
 
 ### Outline
 
-We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll directly get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy a Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks, both related to Storm (in particular deploying a topology from a remote server) enter Swarm (e.g. restarting the manager node and killing the entire Storm cluster with one single-line statement).
+We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll directly get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy a Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks, both related to Storm (in particular deploying and killing a topology from a remote server) and Swarm (e.g. restarting the manager node and killing the entire Storm cluster with one single-line statement).
 
 ### Overview: Deployment
 
@@ -14,22 +14,18 @@ The illustration below shows our tutorial deployment:
 
 ![An overview of our tutorial deployment.](overview.PNG)
 
-We'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, we will only talk to one of the machines, though, (`Ubuntu 1`) and it will (for the most part) just feel like having a single Docker daemon.  
-When Swarm is in place, we'll set up a storm cluster on top that uses the existing ZooKeeper ensemble for coordination and deploy a topology. 
+You'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, you will only talk to one of the machines, though, (`Ubuntu 1`) and it will (for the most part) just feel like having a single Docker daemon.  
+When Swarm is in place, you'll set up a Storm cluster on top that uses the existing ZooKeeper ensemble for coordination.  
 
-Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP!), because otherwise we won't be able to have a look at the beautiful Storm UI ;-)
+Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP if you play along!), because otherwise you won't be able to have a look at the beautiful Storm UI ;-)
 
 ## Step-By-Step
 
 We are using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines. If you do not want to set up a DNS for your ZooKeeper nodes, you can also do the entire tutorial with IP addresses.  
 Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames or IP addresses and you should be able to copy-paste most of the statements into the shell as we go along.
 
-`10.10.100.26` --> `zk1.openstack.baqend.com`  
-`10.10.100.27` --> `zk2.openstack.baqend.com`  
-`10.10.100.28` --> `zk3.openstack.baqend.com`
 
-
-### Prepare an image
+### Prepare an Image
 
 In order to make this entire procedure not too repetitive, you'll do the preparation steps on only one of the machines, shut it down and take a snapshot (image). You will then create the other machines from this snapshot.  
 So let's begin:
@@ -52,14 +48,13 @@ So let's begin:
 and then paste the following and save:
 
 		# the servers in the ZooKeeper ensemble:
-		ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28
+		ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 
 		# the IP address of this machine:
 		PRIVATE_IP=$(hostname)
-		PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 		# define label for the manager node:
-		if [ $PRIVATE_IP == "10.10.100.26" ];then LABELS="--label server=manager";else LABELS="";fi
+		if [ $PRIVATE_IP == "zk1.openstack.baqend.com" ];then LABELS="--label server=manager";else LABELS="";fi
 		# define default options for Docker Swarm:
 		echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
 		    -H unix:///var/run/docker.sock \
@@ -79,6 +74,9 @@ and then paste the following and save:
 
 		# make this machine join the Docker Swarm cluster:
 		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
+**Note:** If you are doing this tutorial with IP addresses instead of hostnames, you should replace the `PRIVATE_IP=$(hostname)` line with the following:
+
+		PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 6. But you still have to ensure that the script is only executed *once* when you spawn each Ubuntu server machine. You can choose from at least three options here:
 	1. The easy way is to provide the script call (`/bin/bash /etc/init.sh`) as an init/customisation script.
 	2. A more fragile way is to add the script call to `/etc/rc.local` and have the script itself remove it on execution like so:
@@ -100,7 +98,7 @@ Time to get to the interesting stuff!
 
 
 
-### Create the Swarm cluster
+### Create the Swarm Cluster
 
 If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. Every machine is already set up to become a Swarm worker node eventually, but you still have to se tup the ZooKeeper ensemble and the Swarm manager for coordination. However, you'll only have to talk to the manager node from this point on:
 
@@ -110,30 +108,30 @@ If nothing has gone wrong, you should have three Ubuntu servers, each running a 
 		docker ps
 3. You are now good to launch one ZooKeeper node on every machine like this:
 
-		docker -H tcp://10.10.100.26:2375 run -d --restart=always \
+		docker -H tcp://zk1.openstack.baqend.com:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk1 \
-		      baqend/zookeeper 10.10.100.26,10.10.100.27,10.10.100.28 1
-		docker -H tcp://10.10.100.27:2375 run -d --restart=always \
+		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 1
+		docker -H tcp://zk2.openstack.baqend.com:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk2 \
-		      baqend/zookeeper 10.10.100.26,10.10.100.27,10.10.100.28 2
-		docker -H tcp://10.10.100.28:2375 run -d --restart=always \
+		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 2
+		docker -H tcp://zk3.openstack.baqend.com:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk3 \
-		      baqend/zookeeper 10.10.100.26,10.10.100.27,10.10.100.28 3
+		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
 Obviously, the `-p` commands expose the ports required by ZooKeeper per default. The two `-v` commands provide persistence in case of container failure by mapping the directories the ZooKeeper container uses to the corresponding host directories. The comma-separated list of hostnames tells ZooKeeper what servers are in the ensemble. This is the same for every node in the ensemble.  
 **The only variable is the ZooKeeper ID** (second argument), because it is unique for every container.
 4. Now it's time to start the swarm manager:
@@ -142,7 +140,7 @@ Obviously, the `-p` commands expose the ports required by ZooKeeper per default.
 		      --label container=manager \
 		      -p 2376:2375 \
 		      -v /etc/docker:/etc/docker \
-		      swarm manage zk://10.10.100.26,10.10.100.27,10.10.100.28
+		      swarm manage zk://zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 5. Finally, you only have to make sure that all future `docker run` statements are directed against the correct  daemon:
 
 		cat << EOF | tee -a ~/.bash_profile
@@ -161,7 +159,7 @@ Type in
 to check cluster status on the manager node. You should see 3 running workers similar to this:
 
 		Nodes: 3
-		 docker1: 10.10.100.26:2375
+		 docker1: zk1.openstack.baqend.com:2375
 		  └ Status: Healthy
 		  └ Containers: 3
 		  └ Reserved CPUs: 0 / 1
@@ -169,7 +167,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, server=manager, storagedriver=devicemapper
 		  └ Error: (none)
 		  └ UpdatedAt: 2016-04-03T15:39:59Z
-		 docker2: 10.10.100.27:2375
+		 docker2: zk2.openstack.baqend.com:2375
 		  └ Status: Healthy
 		  └ Containers: 2
 		  └ Reserved CPUs: 0 / 1
@@ -177,7 +175,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, storagedriver=devicemapper
 		  └ Error: (none)
 		  └ UpdatedAt: 2016-04-03T15:39:45Z
-		 docker3: 10.10.100.28:2375
+		 docker3: zk3.openstack.baqend.com:2375
 		  └ Status: Healthy
 		  └ Containers: 2
 		  └ Reserved CPUs: 0 / 1
@@ -190,7 +188,7 @@ The important part is the line with `Status: Healthy` for each node. If you obse
 	docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | grep -v 'CONTAINER' | awk '{print $1;}')
 and check again.
 
-### Setup the Storm cluster
+### Setup the Storm Cluster
 
 Now that Swarm is running, you will create an overlay network that spans all Swarm nodes and then spin up several containers for the individual Storm components.  
 The Nimbus and the UI will be hosted on the manager node, whereas the supervisors (i.e. Storm workers) will be scattered across all nodes in the Swarm cluster. 
@@ -208,7 +206,7 @@ First, start the UI
 		    -d \
 		    --label cluster=storm \
 		    -e constraint:server==manager \
-		    -e STORM_ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28 \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 		    --net stormnet \
 		    --restart=always \
 		    --name ui \
@@ -221,7 +219,7 @@ and the Nimbus:
 		    -d \
 		    --label cluster=storm \
 		    -e constraint:server==manager \
-		    -e STORM_ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28 \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 		    --net stormnet \
 		    --restart=always \
 		    --name nimbus \
@@ -236,16 +234,14 @@ To make sure that these are running on the manager node, we specified a **constr
 		    --label cluster=storm \
 		    --label container=supervisor \
 			-e affinity:container!=supervisor \
-		    -e STORM_ZOOKEEPER_SERVERS=10.10.100.26,10.10.100.27,10.10.100.28 \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 		    --net stormnet \
 		    --restart=always \
 		    baqend/storm supervisor \
 		     -c nimbus.host=nimbus \
 		     -c supervisor.slots.ports=6700,6701,6702,6703
 Since we do not care where exactly the individual supervisors are running, we did not specify any constraints here. However, in order to prevent two supervisors from being hosted on one machine unless there is no free machine available, we did specify an **affinity**: `affinity:container!=supervisor`. 
-4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP, you can access the UI via `http://<manager-ip>:8080`. Make sure that you have three supervisors running. Should look something like this:
-
-![The Storm UI.](StormUI.PNG)
+4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP, you can access the UI via `http://<manager-ip>:8080`. Make sure that you have three supervisors running.
 
 ### (Remote) Topology Deployment
 
@@ -258,8 +254,9 @@ Deploying a topology can now be done from any server that has a Docker daemon ru
 	   baqend/storm \
 	     -c nimbus.host=<manager-ip> \
 	     jar /topology.jar \
-	       callbaq.storm.Topology \
-	       topologyName=Callbaq redisURL=tcp://10.10.100.18
+	       main.class \
+	       topologyArgument1 \
+	       topologyArgument2
 Since relative paths are not supported, we use `readlink -m topology.jar` which produces an absolute path for `topology.jar`. You can also provide an absolute path directly.
 
 Killing the topology can either be done via the Storm web UI interactively or, assuming the running topology is called `runningTopology`, like this:
@@ -271,47 +268,19 @@ Killing the topology can either be done via the Storm web UI interactively or, a
 	     -c nimbus.host=<manager-ip> \
 	     kill runningTopology
 
-### Shutting down the Storm Cluster
+### Shutting Down the Storm Cluster
 
 Since every Storm-related container is marked with the label (`cluster=storm`), you can kill all of them with the following statement:
 
 	docker rm -f $(docker ps -a --no-trunc --filter "label=cluster=storm" | awk '{if(NR>1)print $1;}')
 
-## TL; DR
+## Don't Forget About Security!
 
-As mentioned above, we have published some scripts on GitHub to ease this entire ordeal. So if you want some quick results, he are the fast-forward instructions:
-
-1. **Preparation**: Spin up 3 Ubuntu 14.04 machines for our Docker Swarm Cluster; let's call them `Ubuntu 1`, `Ubuntu 2` and  `Ubuntu 3` with IP addresses `%IP1`, `%IP2` and `%IP3`, respectively. 
-2. **Connect via SSH**: Connect to all 3 machines via SSH.
-3. **Setup phase 1**: On every machine, install git, check out the repository, change director and call the `prepare.sh` script. You are only required to provide one single parameter, namely all servers that take part in ZooKeeper ensemble as a comma-separated list (`%IP1,%IP2,%IP3`):
-
-		sudo apt-get install git -y && \
-		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-		cd tutorial-swarm-storm && \
-		. files/prepare.sh %IP1,%IP2,%IP3
-The `prepare.sh` script will install docker, do some configuration and append some `export` statements to `~/.bash_profile` for convenience during the following installation steps. Finally, the script will reboot.
-4. **Setup phase 2**: After reboot, reconnect to all 3 machines, enter the tutorial directory and call the `setup.sh` script:
-
-		cd tutorial-swarm-storm && \
-		. files/setup.sh
-This script will launch a ZooKeeper node, have it join the ZooKeeper ensemble and then wait for the other ZooKeeper nodes. When the ZooKeeper ensemble is complete, the script proceeds with the installation: When executed on `Ubuntu 1`, it will setup the Swarm manager and a pure worker on node otherwise.
-4. **Create an overlay network**: On the Swarm manager machine (`Ubuntu 1`), make sure you are in the `tutorial-swarm-storm` directory and call the `createNetwork.sh` script to create a network that spans all swarm nodes and have the running ZooKeeper containers join it:
-
-       	. files/createNetwork.sh
-4. **Start the Storm Cluster**: Again, on the Swarm manager make sure you are in the `tutorial-swarm-storm` directory and call the Storm launcher script. You can specify the desired number of supervisors as argument to the script:
-
-       	. files/util/startStorm.sh 3
-5. **Deploy a Topology**: 
-
-       	. files/util/deploy-topology.sh
-
-
+In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node ZooKeeper ensemble for high availability and fault-tolerance. In order to prevent the complexity of this tutorial from going through the roof, though, we let out how to **[configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/)**. If you are planning to use Docker Swarm in a business-critical application, you should definitely put some effort into this aspect of deployment! 
 
 ## Closing Remarks
 
-In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node the ZooKeeper ensemble for high availability and fault-tolerance. But if you are planning to use Docker Swarm in business-critical application, you should definitely consider using **HTTPS between Swarm nodes**: In order to prevent the complexity of this tutorial from going through the roof, we let out how to [configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/). However, it is definitely critical for security.
-
-The tutorial with all resources and our Storm and ZooKeeper Docker images are available under the very permissive *Chicken Dance License v0.2*:
+We created the tutorial for Docker version 1.10.3 and Swarm version 1.1.3. The tutorial itself as well as our Storm and ZooKeeper Docker images are available under the very permissive *Chicken Dance License v0.2*:
 
 - **tutorial** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
 - **baqend/storm Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/storm/) and [GitHub](https://github.com/Baqend/docker-storm)
