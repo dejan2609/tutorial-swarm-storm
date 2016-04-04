@@ -21,7 +21,9 @@ Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP!), 
 
 ## Step-By-Step
 
-We'll be using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines.  
+We are using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines. If you do not want to set up a DNS for your ZooKeeper nodes, you can also do the entire tutorial with IP addresses.  
+Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames or IP addresses and you should be able to copy-paste most of the statements into the shell as we go along.
+
 `10.10.100.26` --> `zk1.openstack.baqend.com`  
 `10.10.100.27` --> `zk2.openstack.baqend.com`  
 `10.10.100.28` --> `zk3.openstack.baqend.com`
@@ -29,10 +31,10 @@ We'll be using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` 
 
 ### Prepare an image
 
-In order to make this entire procedure not too repetitive, we'll do the preparation steps on only one of them, shut it down and take a snapshot (image). We will then create the other machines from this snapshot.  
+In order to make this entire procedure not too repetitive, you'll do the preparation steps on only one of the machines, shut it down and take a snapshot (image). You will then create the other machines from this snapshot.  
 So let's begin:
 
-1. We connect to one of the servers via SSH and [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/). To enable calling the Docker client without `sudo`, the following will also add the current user to the Docker user group (`sudo usermod ...`):
+1. Connect to one of the servers via SSH and [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/). To enable calling the Docker client without `sudo`, the following will also add the current user to the Docker user group (`sudo usermod ...`):
 
 		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
 		&& echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee -a /etc/apt/sources.list.d/docker.list \
@@ -44,7 +46,7 @@ So let's begin:
 		sudo service docker stop \
 		&& sudo rm /etc/docker/key.json
 **Note:** If you don't remove the key file before taking the snapshot, all machines spawned from this image will have the same identifier and you'll end up with a broken Swarm cluster.  
-5. Now you are almost done. The only thing left to do is to prepare the machine in such a way that it will become a Swarm worker the next time it boots. To this end, create file `/etc/init.sh` with an editor like nano
+5. The only thing left to do is to prepare the machine in such a way that it will become a Swarm worker the next time it boots. To this end, create file `/etc/init.sh` with an editor like nano
 
 		sudo nano /etc/init.sh
 and then paste the following and save:
@@ -68,13 +70,16 @@ and then paste the following and save:
 		| sudo tee /etc/default/docker
 
 		# restart the service to apply new options:
+		# in principle, a simple
+		#   sudo service docker restart
+		# should suffice, but sometimes it does not, so do this to make sure:
 		sudo service docker stop
-		sudo rm -r /var/lib/docker/network # pre-emptive fix of issue 17083; https://github.com/docker/docker/issues/17083
+		sudo rm -r /var/lib/docker/network # see issue 17083; https://github.com/docker/docker/issues/17083
 		sudo service docker start
 
 		# make this machine join the Docker Swarm cluster:
 		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
-6. But you still have to ensure that the script is only executed *once* when you spawn each Ubuntu server machine. You can choose from at least three options:
+6. But you still have to ensure that the script is only executed *once* when you spawn each Ubuntu server machine. You can choose from at least three options here:
 	1. The easy way is to provide the script call (`/bin/bash /etc/init.sh`) as an init/customisation script.
 	2. A more fragile way is to add the script call to `/etc/rc.local` and have the script itself remove it on execution like so:
 
@@ -84,10 +89,11 @@ and then paste the following and save:
 				sudo sed -i -e "s/\/bin\/bash \/etc\/init.sh\n//g" /etc/rc.local
 			EOF
 	3. You can also, of course, just connect to each machine and call the script manually *after you have spawned all machines*.
-5. Whichever you have chosen above, it is now time to shut down the machine:
+5. Whichever option you chose, it is now time to shut down the machine:
 
 		sudo shutdown -h now
-6. Finally, take a snapshot of the machine, rebuild the other servers from this image and restart the machine you have taken the image from. For those who did not choose the somewhat hacky Option 2: Don't forget to make sure the  init script is called!
+6. Finally, take a snapshot of the machine, rebuild the other servers from this image and restart the machine you have taken the image from.  
+7. For those who did not choose the somewhat hacky Option 2: Don't forget to make sure the  init script is called once upfront!
 
 
 Time to get to the interesting stuff!
@@ -98,11 +104,11 @@ Time to get to the interesting stuff!
 
 If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. Every machine is already set up to become a Swarm worker node eventually, but you still have to se tup the ZooKeeper ensemble and the Swarm manager for coordination. However, you'll only have to talk to the manager node from this point on:
 
-1. We choose `Ubuntu 1` to become the manager node and connect to it via SSH.
-2. We then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
+1. Choose `Ubuntu 1` to become the manager node and connect to it via SSH.
+2. Then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
 
 		docker ps
-3. We will now launch one ZooKeeper node on every machine like this:
+3. You are now good to launch one ZooKeeper node on every machine like this:
 
 		docker -H tcp://10.10.100.26:2375 run -d --restart=always \
 		      -p 2181:2181 \
@@ -137,7 +143,7 @@ Obviously, the `-p` commands expose the ports required by ZooKeeper per default.
 		      -p 2376:2375 \
 		      -v /etc/docker:/etc/docker \
 		      swarm manage zk://10.10.100.26,10.10.100.27,10.10.100.28
-5. Finally, we only have to make sure that all future ` docker run` statements are directed against the correct  daemon:
+5. Finally, you only have to make sure that all future `docker run` statements are directed against the correct  daemon:
 
 		cat << EOF | tee -a ~/.bash_profile
 			# this node is the master and therefore should be able to talk to the Swarm cluster:
@@ -152,7 +158,7 @@ Now everything should be up and running fine.
 Type in
 
 	docker info
-to check cluster status on the manager note. You should see really running workers similar to this:
+to check cluster status on the manager node. You should see 3 running workers similar to this:
 
 		Nodes: 3
 		 docker1: 10.10.100.26:2375
@@ -179,22 +185,23 @@ to check cluster status on the manager note. You should see really running worke
 		  └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, storagedriver=devicemapper
 		  └ Error: (none)
 		  └ UpdatedAt: 2016-04-03T15:40:15Z
-The important part is the line with `Status: Healthy`. If you should observe something like `Status: Pending` or if not all nodes show up, even though you are not observing errors elsewhere, try restarting the manager container like so 
+The important part is the line with `Status: Healthy` for each node. If you observe something like `Status: Pending` or if not all nodes show up, even though you are not experiencing any errors elsewhere, try restarting the manager container like so 
 
 	docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | grep -v 'CONTAINER' | awk '{print $1;}')
 and check again.
 
 ### Setup the Storm cluster
 
-Now that Swarm is running, we will create an overlay network that spans all nodes and then spin up several containers for the individual storm components.  The Nimbus and the UI will be hosted on the manager node, whereas the supervisors (i.e. Storm workers) will be scattered across all nodes in the Swarm cluster. 
+Now that Swarm is running, you will create an overlay network that spans all Swarm nodes and then spin up several containers for the individual Storm components.  
+The Nimbus and the UI will be hosted on the manager node, whereas the supervisors (i.e. Storm workers) will be scattered across all nodes in the Swarm cluster. 
 
-1. First, create the overlay network `stormnet` 
+1. First, create the overlay network `stormnet` like this 
 
 		docker network create --driver overlay stormnet
-and check whether the following produces a line containing the terms `stormnet` and `overlay`:
+and check whether `stormnet` shows up as overlay network when you ask Docker nicely:
 
-		docker network ls | grep stormnet
-2. Now we will start everything one by one. Every Storm-related container will get a `cluster=storm`, so that we can easily kill the entire Storm cluster later without accidentally killing other containers.  
+		docker network ls
+2. Now you will start every Storm component one-by-one. Every Storm-related container will get a `cluster=storm` label, so that you will be able to easily kill the entire Storm cluster later without accidentally killing other containers.  
 First, start the UI 
 
 		docker run \
@@ -222,7 +229,7 @@ and the Nimbus:
 		    baqend/storm nimbus \
 		      -c nimbus.host=nimbus
 To make sure that these are running on the manager node, we specified a **constraint**: `constraint:server==manager`.
-3. To start 3 supervisors, we fire the following statement 3 times:
+3. To start 3 supervisors, fire the following statement 3 times:
 
 		docker run \
 		    -d \
@@ -235,19 +242,40 @@ To make sure that these are running on the manager node, we specified a **constr
 		    baqend/storm supervisor \
 		     -c nimbus.host=nimbus \
 		     -c supervisor.slots.ports=6700,6701,6702,6703
-Since we do not care where exactly the individual supervisors are running, we did not specify any constraints. However, in order to prevent two supervisors from being hosted on one machine unless there is no free machine available, we did specify an **affinity**: `affinity:container!=supervisor`. 
-4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP, you can access the UI via `http://<manager-ip>:8080`. Make sure the you have three supervisors running. Should look something like this:
+Since we do not care where exactly the individual supervisors are running, we did not specify any constraints here. However, in order to prevent two supervisors from being hosted on one machine unless there is no free machine available, we did specify an **affinity**: `affinity:container!=supervisor`. 
+4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP, you can access the UI via `http://<manager-ip>:8080`. Make sure that you have three supervisors running. Should look something like this:
 
 ![The Storm UI.](StormUI.PNG)
 
 ### (Remote) Topology Deployment
 
+Deploying a topology can now be done from any server that has a Docker daemon running and is in the same network as the manager machine. The following command assumes that your topology fatjar is a file called `topology.jar` in your current working directory:
+
+	docker run \
+	   -it \
+	   --rm \
+	   -v $(readlink -m topology.jar):/topology.jar \
+	   baqend/storm \
+	     -c nimbus.host=<manager-ip> \
+	     jar /topology.jar \
+	       callbaq.storm.Topology \
+	       topologyName=Callbaq redisURL=tcp://10.10.100.18
+Since relative paths are not supported, we use `readlink -m topology.jar` which produces an absolute path for `topology.jar`. You can also provide an absolute path directly.
+
+Killing the topology can either be done via the Storm web UI interactively or, assuming the running topology is called `runningTopology`, like this:
+
+	docker run \
+	   -it \
+	   --rm \
+	   baqend/storm \
+	     -c nimbus.host=<manager-ip> \
+	     kill runningTopology
 
 ### Shutting down the Storm Cluster
 
+Since every Storm-related container is marked with the label (`cluster=storm`), you can kill all of them with the following statement:
 
-
-
+	docker rm -f $(docker ps -a --no-trunc --filter "label=cluster=storm" | awk '{if(NR>1)print $1;}')
 
 ## TL; DR
 
@@ -281,17 +309,14 @@ This script will launch a ZooKeeper node, have it join the ZooKeeper ensemble an
 
 ## Closing Remarks
 
-In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node the ZooKeeper ensemble for high availability and fault-tolerance. But if you are planning to use Docker Swarm in business-critical applic
-
-- **HTTPS between Swarm nodes**: In order to prevent the complexity of this tutorial from going through the roof, we let out how to [configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/). However, it is definitely critical for security!
-- **Use a DNS for ZooKeeper**: Even though you can use IP addresses instead of hostnames for the sake of this tutorial, we strongly recommend employing a DNS and using *hostnames instead of IP addresses* when setting up the ZooKeeper ensemble for production. Using IP addresses implies that a failed ZooKeeper node can only be replaced by another node with *the same IP*. This is definitely not a desirable dependency! 
+In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node the ZooKeeper ensemble for high availability and fault-tolerance. But if you are planning to use Docker Swarm in business-critical application, you should definitely consider using **HTTPS between Swarm nodes**: In order to prevent the complexity of this tutorial from going through the roof, we let out how to [configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/). However, it is definitely critical for security.
 
 The tutorial with all resources and our Storm and ZooKeeper Docker images are available under the very permissive *Chicken Dance License v0.2*:
 
-- **tutorial with scripts etc.** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
+- **tutorial** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
 - **baqend/storm Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/storm/) and [GitHub](https://github.com/Baqend/docker-storm)
 - **baqend/zookeeper Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/zookeeper/) and [GitHub](https://github.com/Baqend/docker-zookeeper)
 
-Please feel free to fork us on GitHub or file a pull request if you have any suggestions for further improvement! 
+Please feel free to fork us on GitHub or file a pull request if you have any improvements! 
  
 We hope you enjoyed this tutorial and leave us some feedback in the comments section below!

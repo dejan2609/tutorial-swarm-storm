@@ -19,8 +19,7 @@ EOF
 docker run \
    -it \
    --rm \
-   -v $(readlink -m $1):/topology.jar \
-   -v $(readlink -m $FILE):/mnt/storm/conf/storm.yaml \
+   -v $(readlink -m topology.jar):/topology.jar \
    baqend/storm \
    jar /topology.jar "${@:3}"
 
