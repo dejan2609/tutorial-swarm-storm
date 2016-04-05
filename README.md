@@ -186,7 +186,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ UpdatedAt: 2016-04-03T15:40:15Z
 The important part is the line with `Status: Healthy` for each node. If you observe something like `Status: Pending` or if not all nodes show up, even though you are not experiencing any errors elsewhere, try restarting the manager container like so 
 
-	docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | grep -v 'CONTAINER' | awk '{print $1;}')
+	docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | awk '{if(NR>1)print $1;}')
 and check again.
 
 ### Setup the Storm Cluster
@@ -274,6 +274,29 @@ Killing the topology can either be done via the Storm web UI interactively or, a
 Since every Storm-related container is marked with the label (`cluster=storm`), you can kill all of them with the following statement:
 
 	docker rm -f $(docker ps -a --no-trunc --filter "label=cluster=storm" | awk '{if(NR>1)print $1;}')
+
+## TL;DR
+
+In case you prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! Here are the fast-forward instructions:
+
+1. Create a Ubuntu 14.04 VM with the following customisation script:
+
+		#!/bin/bash
+		sudo apt-get install git -y && \
+		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
+		/bin/bash tutorial-swarm-storm/scripts/installDocker.sh && \
+		sudo cp tutorial-swarm-storm/scripts/{init.sh,killStorm.sh,restartManager.sh,storm.sh,swarm.sh} /etc/ && \
+		sudo shutdown -h now
+2. Let's call this machine `Ubuntu 1`. Once the machine is shutdown, take a snapshot. 
+3. Wanted to machines from the image you're just taking, using the following customisation script
+
+		#!/bin/bash
+		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+4. Start `Ubuntu 1` and execute the following:
+
+		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
+		/bin/bash /etc/swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
+		/bin/bash /etc/storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
 
 ## Don't Forget About Security!
 
