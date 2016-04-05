@@ -30,14 +30,15 @@ Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm
 In order to make this entire procedure not too repetitive, you'll do the preparation steps on only one of the machines, shut it down and take a snapshot (image). You will then create the other machines from this snapshot.  
 So let's begin:
 
-1. Connect to one of the servers via SSH and [install Docker](https://docs.docker.com/engine/installation/linux/ubuntulinux/). To enable calling the Docker client without `sudo`, the following will also add the current user to the Docker user group (`sudo usermod ...`):
+1. Connect to one of the servers via SSH and install Docker by executing the following:
 
 		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
 		&& echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee -a /etc/apt/sources.list.d/docker.list \
 		&& sudo apt-get update && sudo apt-get purge lxc-docker && sudo apt-cache policy docker-engine \
 		&& sudo apt-get update -y && sudo  apt-get install -y linux-image-extra-$(uname -r) apparmor docker-engine git make \
 		&& sudo usermod -aG docker $(whoami)
-4. Since docker uses a key file to identify individual docker daemons, you now have to stop the docker daemon, delete the key file (Docker will generate a new one after restart) and shut down the machine before taking the snapshot:
+(Details on how to install Docker can be found [here](https://docs.docker.com/engine/installation/linux/ubuntulinux/).)
+4. Since Docker uses a key file to identify individual docker daemons, you now have to stop the docker daemon, delete the key file (Docker will generate a new one after restart) and shut down the machine before taking the snapshot:
 
 		sudo service docker stop \
 		&& sudo rm /etc/docker/key.json
@@ -47,14 +48,18 @@ So let's begin:
 		sudo nano /etc/init.sh
 and then paste the following and save:
 
-		# the servers in the ZooKeeper ensemble:
-		ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
-
+		# first script argument: the servers in the ZooKeeper ensemble:
+		ZOOKEEPER_SERVERS=$1
+		
+		# second script argument: the role of this node:
+		# ("manager" for the Swarm manager node; plain worker node else)
+		ROLE=$2
+		
 		# the IP address of this machine:
-		PRIVATE_IP=$(hostname)
-
+		PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
+		
 		# define label for the manager node:
-		if [ $PRIVATE_IP == "zk1.openstack.baqend.com" ];then LABELS="--label server=manager";else LABELS="";fi
+		if [ $ROLE == "manager" ];then LABELS="--label server=manager";else LABELS="";fi
 		# define default options for Docker Swarm:
 		echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
 		    -H unix:///var/run/docker.sock \
@@ -74,24 +79,20 @@ and then paste the following and save:
 
 		# make this machine join the Docker Swarm cluster:
 		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
-**Note:** If you are doing this tutorial with IP addresses instead of hostnames, you should replace the `PRIVATE_IP=$(hostname)` line with the following:
-
-		PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
-6. But you still have to ensure that the script is only executed *once* when you spawn each Ubuntu server machine. You can choose from at least three options here:
-	1. The easy way is to provide the script call (`/bin/bash /etc/init.sh`) as an init/customisation script.
-	2. A more fragile way is to add the script call to `/etc/rc.local` and have the script itself remove it on execution like so:
-
-			sudo sed -i -e "s/exit 0$/\/bin\/bash \/etc\/init.sh\nexit 0/g" /etc/rc.local \
-			&& cat << EOF | sudo tee -a /etc/init.sh
-				# finally comment out the script call in /etc/rc.local, so that it isn't executed again
-				sudo sed -i -e "s/\/bin\/bash \/etc\/init.sh\n//g" /etc/rc.local
-			EOF
-	3. You can also, of course, just connect to each machine and call the script manually *after you have spawned all machines*.
-5. Whichever option you chose, it is now time to shut down the machine:
+5. It is now time to shut down the machine 
 
 		sudo shutdown -h now
-6. Finally, take a snapshot of the machine, rebuild the other servers from this image and restart the machine you have taken the image from.  
-7. For those who did not choose the somewhat hacky Option 2: Don't forget to make sure the  init script is called once upfront!
+and **take a snapshot** of it. 
+6. Now launch two more machines from this image (snapshot), providing the following as an init/customisation script:
+
+		/bin/bash /etc/init.sh \
+			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+7. Restart the machine you have taken the image from and execute the following:
+ 
+		/bin/bash /etc/init.sh \
+			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
+			manager
+This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
 
 
 Time to get to the interesting stuff!
@@ -100,9 +101,9 @@ Time to get to the interesting stuff!
 
 ### Create the Swarm Cluster
 
-If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. Every machine is already set up to become a Swarm worker node eventually, but you still have to se tup the ZooKeeper ensemble and the Swarm manager for coordination. However, you'll only have to talk to the manager node from this point on:
+If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to se tup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
 
-1. Choose `Ubuntu 1` to become the manager node and connect to it via SSH.
+1. Connect to `Ubuntu 1` via SSH.
 2. Then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
 
 		docker ps
