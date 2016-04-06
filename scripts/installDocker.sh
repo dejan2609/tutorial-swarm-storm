@@ -5,7 +5,3 @@ sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates 
 && sudo apt-get update && sudo apt-get purge lxc-docker && sudo apt-cache policy docker-engine \
 && sudo apt-get update -y && sudo  apt-get install -y linux-image-extra-$(uname -r) apparmor docker-engine git make \
 && sudo usermod -aG docker $(whoami)
-
-sudo service docker stop \
-&& sudo rm /etc/docker/key.json
-

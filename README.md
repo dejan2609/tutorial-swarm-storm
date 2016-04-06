@@ -279,16 +279,16 @@ Since every Storm-related container is marked with the label (`cluster=storm`), 
 
 In case you prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! Here are the fast-forward instructions:
 
-1. Create a Ubuntu 14.04 VM with the following customisation script:
+1. Connect to a server via SSH -- let's call it `Ubuntu 1` -- and execute the following:
 
-		#!/bin/bash
 		sudo apt-get install git -y && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-		/bin/bash tutorial-swarm-storm/scripts/installDocker.sh && \
-		sudo cp tutorial-swarm-storm/scripts/{init.sh,killStorm.sh,restartManager.sh,storm.sh,swarm.sh} /etc/ && \
+		cd tutorial-swarm-storm && \
+		sudo /bin/bash scripts/installDocker.sh && \
+		sudo /bin/bash scripts/prepare.sh && \
 		sudo shutdown -h now
-Let's call this machine `Ubuntu 1`.
-2.  Once the machine is shutdown, take a snapshot. 
+
+2. The machine will automatically power down. When it has shut down, take a snapshot. 
 3. Launch two machines from the image you just took, using the following customisation script:
 
 		#!/bin/bash
