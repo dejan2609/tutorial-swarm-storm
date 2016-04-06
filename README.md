@@ -34,8 +34,8 @@ Here are the fast-forward instructions:
 		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
 		chmod +x tutorial-swarm-storm/scripts/* && \
-		sudo cp -p tutorial-swarm-storm/scripts/* /etc/ && \
-		sudo /etc/installDocker.sh && \
+		cd tutorial-swarm-storm/scripts/ && \
+		sudo bash installDocker.sh && \
 		sudo usermod -aG docker ubuntu && \
 		sudo shutdown -h now
 
@@ -45,16 +45,17 @@ Here are the fast-forward instructions:
 		#!/bin/bash
 		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-		chmod +x tutorial-swarm-storm/scripts/* && \
-		sudo cp -p tutorial-swarm-storm/scripts/* /etc/ && \
-		/etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+		cd tutorial-swarm-storm/scripts/ && \
+		chmod +x ./* && \
+		./init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own.
 4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
 4. Finally, start `Ubuntu 1` and execute the following:
-
-		/etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
-		/etc/swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
-		/etc/storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
+ 
+		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
+		sudo bash init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
+		sudo bash swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com && \
+		sudo bash storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
 
 You should now be able to access the Storm UI under `http://<manager-ip>:8080`! 
 
@@ -126,7 +127,7 @@ and **take a snapshot** of it.
 			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
-8. Finally, set your DNS in such a way that the `zk1...`  hostname points towards `Ubuntu 1` and the other two hostnames point towards the other two machines you just started.
+8. Finally, set your DNS in such a way that the first hostname in the list (`zk1...`) points towards `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started.
 
 
 Time to get to the interesting stuff!

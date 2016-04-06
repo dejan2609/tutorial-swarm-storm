@@ -42,6 +42,9 @@ docker run -d --restart=always \
 # wait a little:
 sleep 10
 
+# check containers
+docker ps
+
 # make sure the client talks to the right Docker daemon:
 cat << EOF | tee -a ~/.bash_profile
     # this node is the master and therefore should be able to talk to the Swarm cluster:
@@ -51,6 +54,9 @@ export DOCKER_HOST=tcp://127.0.0.1:2376
 
 # restart the manager just to make sure:
 docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | awk '{if(NR>1)print $1;}')
+
+# wait a little:
+sleep 10
 
 # Let's have a look at the Swarm cluster:
 docker info
