@@ -39,6 +39,9 @@ docker run -d --restart=always \
       -v /etc/docker:/etc/docker \
       swarm manage zk://$ZOOKEEPER_SERVERS
 
+# wait a little:
+sleep 10
+
 # make sure the client talks to the right Docker daemon:
 cat << EOF | tee -a ~/.bash_profile
     # this node is the master and therefore should be able to talk to the Swarm cluster:
