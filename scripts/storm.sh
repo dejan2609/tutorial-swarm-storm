@@ -11,6 +11,12 @@ if ! [[ $SUPERVISORS =~ ^[0-9]+ ]] ; then
    SUPERVISORS=1
 fi
 
+# create overlay network
+docker network create --driver overlay stormnet
+
+# check network
+docker network ls
+
 # launch nimbus
 docker run \
     -d \
@@ -37,7 +43,7 @@ docker run \
     baqend/storm ui \
       -c nimbus.host=nimbus
 
-# launched the supervisor's
+# launch the supervisors
 for (( i=1; i <= $SUPERVISORS; i++ )); do
       docker run \
           -d \

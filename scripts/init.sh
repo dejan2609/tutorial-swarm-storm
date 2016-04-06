@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # first script argument: the servers in the ZooKeeper ensemble:
-ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+ZOOKEEPER_SERVERS=$1
 
 # second script argument: the role of this node:
 # ("manager" for the Swarm manager node; plain worker node else)

@@ -6,7 +6,7 @@ For our upcoming **query caching and continuous query** features, we rely on [Ap
 
 ### Outline
 
-We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll directly get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy a Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks, both related to Storm (in particular deploying and killing a topology from a remote server) and Swarm (e.g. restarting the manager node and killing the entire Storm cluster with one single-line statement).
+We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy a Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks, both related to Storm (in particular deploying and killing a topology from a remote server) and Swarm (e.g. restarting the manager node and killing the entire Storm cluster with one single-line statement).
 
 ### Overview: Deployment
 
@@ -19,11 +19,44 @@ When Swarm is in place, you'll set up a Storm cluster on top that uses the exist
 
 Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP if you play along!), because otherwise you won't be able to have a look at the beautiful Storm UI ;-)
 
-## Step-By-Step
+## Step-By-Step Guide
 
-We are using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines. If you do not want to set up a DNS for your ZooKeeper nodes, you can also do the entire tutorial with IP addresses.  
-Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames or IP addresses and you should be able to copy-paste most of the statements into the shell as we go along.
+We are using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines. Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames in the `readme.me` and you should be able to copy-paste most of the statements into the shell as we go along.
 
+### TL;DR
+
+In case you prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! For the detailed step-by-step explanations, see below.  
+Here are the fast-forward instructions:
+
+1. Connect to a server via SSH -- let's call it `Ubuntu 1` -- and execute the following:
+
+		sudo apt-get install git -y && \
+		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
+		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
+		chmod +x tutorial-swarm-storm/scripts/* && \
+		sudo cp -p tutorial-swarm-storm/scripts/* /etc/ && \
+		sudo /etc/installDocker.sh && \
+		sudo usermod -aG docker ubuntu && \
+		sudo shutdown -h now
+
+2. The machine will automatically power down. When it has shut down, take a snapshot. 
+3. Launch two machines from the image you just took, using the following customisation script:
+
+		#!/bin/bash
+		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
+		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
+		chmod +x tutorial-swarm-storm/scripts/* && \
+		sudo cp -p tutorial-swarm-storm/scripts/* /etc/ && \
+		/etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+**Note:** You'll have to replace the hostnames in the comma-separated list above with your own.
+4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
+4. Finally, start `Ubuntu 1` and execute the following:
+
+		/etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
+		/etc/swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
+		/etc/storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
+
+You should now be able to access the Storm UI under `http://<manager-ip>:8080`! 
 
 ### Prepare an Image
 
@@ -93,6 +126,7 @@ and **take a snapshot** of it.
 			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
+8. Finally, set your DNS in such a way that the `zk1...`  hostname points towards `Ubuntu 1` and the other two hostnames point towards the other two machines you just started.
 
 
 Time to get to the interesting stuff!
@@ -101,7 +135,7 @@ Time to get to the interesting stuff!
 
 ### Create the Swarm Cluster
 
-If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to se tup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
+If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` reachable via `zk1.openstack.baqend.com` and is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to se tup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
 
 1. Connect to `Ubuntu 1` via SSH.
 2. Then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
@@ -274,35 +308,6 @@ Killing the topology can either be done via the Storm web UI interactively or, a
 Since every Storm-related container is marked with the label (`cluster=storm`), you can kill all of them with the following statement:
 
 	docker rm -f $(docker ps -a --no-trunc --filter "label=cluster=storm" | awk '{if(NR>1)print $1;}')
-
-## TL;DR
-
-In case you prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! Here are the fast-forward instructions:
-
-1. Connect to a server via SSH -- let's call it `Ubuntu 1` -- and execute the following:
-
-		sudo apt-get install git -y && \
-		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
-		cd tutorial-swarm-storm && \
-		sudo /bin/bash scripts/installDocker.sh && \
-		sudo /bin/bash scripts/prepare.sh && \
-		sudo usermod -aG docker $(whoami) && \
-		sudo shutdown -h now
-
-2. The machine will automatically power down. When it has shut down, take a snapshot. 
-3. Launch two machines from the image you just took, using the following customisation script:
-
-		#!/bin/bash
-		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
-**Note:** You'll have to replace the hostnames in the comma-separated list above with your own.
-4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
-4. Finally, start `Ubuntu 1` and execute the following:
-
-		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
-		/bin/bash /etc/swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
-		/bin/bash /etc/storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
-
-You should now be able to access the Storm UI under `http://<manager-ip>:8080`!
 
 ## Don't Forget About Security!
 
