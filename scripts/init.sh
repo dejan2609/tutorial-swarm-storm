@@ -11,7 +11,7 @@ ROLE=$2
 PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 # define label for the manager node:
-if [ $ROLE == "manager" ];then LABELS="--label server=manager";else LABELS="";fi
+if [[ $ROLE == "manager" ]];then LABELS="--label server=manager";else LABELS="";fi
 # define default options for Docker Swarm:
 echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
     -H unix:///var/run/docker.sock \

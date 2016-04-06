@@ -34,7 +34,7 @@ docker -H tcp://zk3.openstack.baqend.com:2375 run -d --restart=always \
 
 # Wait for the ZooKeeper ensemble to become healthy before proceeding with installation
 MODE=
-while [ -z $MODE ]
+while [[ -z $MODE ]]
 do
     echo "waiting for ZooKeeper ensemble to become healthy..."
     sleep 1
