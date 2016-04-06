@@ -32,16 +32,6 @@ docker -H tcp://zk3.openstack.baqend.com:2375 run -d --restart=always \
       --name zk3 \
       baqend/zookeeper $ZOOKEEPER_SERVERS 3
 
-# Wait for the ZooKeeper ensemble to become healthy before proceeding with installation
-MODE=
-while [[ -z $MODE ]]
-do
-    echo "waiting for ZooKeeper ensemble to become healthy..."
-    sleep 1
-    MODE=$(docker exec -it zk1 /opt/zookeeper/bin/zkServer.sh status | grep ^Mode: | awk '{print $2;}')
-done
-echo "ZooKeeper ensemble up and running!"
-
 # launch the Swarm manager
 docker run -d --restart=always \
       --label container=manager \

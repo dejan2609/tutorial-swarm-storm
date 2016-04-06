@@ -9,7 +9,6 @@ for i in "${images[@]}"; do
    sudo docker pull "$i"
 done
 
-
 # stop the Docker service and remove the key file
 sudo service docker stop \
 && sudo rm /etc/docker/key.json
