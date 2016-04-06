@@ -13,7 +13,7 @@ PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ prin
 # define label for the manager node:
 if [[ $ROLE == "manager" ]];then LABELS="--label server=manager";else LABELS="";fi
 # define default options for Docker Swarm:
-echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
+echo "DOCKER_OPTS=\"-H tcp://127.0.0.1:2375 \
     -H unix:///var/run/docker.sock \
     --cluster-advertise eth0:2375 \
     $LABELS \
