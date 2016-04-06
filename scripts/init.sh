@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # first script argument: the servers in the ZooKeeper ensemble:
-ZOOKEEPER_SERVERS=$1
+ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 
 # second script argument: the role of this node:
 # ("manager" for the Swarm manager node; plain worker node else)
@@ -23,6 +23,9 @@ echo "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 \
 
 # restart the service to apply new options:
 sudo service docker restart
+
+# wait a little:
+sleep 10
 
 # make this machine join the Docker Swarm cluster:
 docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS

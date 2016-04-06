@@ -286,6 +286,7 @@ In case you prefer some quick results, we [prepared some scripts](https://github
 		cd tutorial-swarm-storm && \
 		sudo /bin/bash scripts/installDocker.sh && \
 		sudo /bin/bash scripts/prepare.sh && \
+		sudo usermod -aG docker $(whoami) && \
 		sudo shutdown -h now
 
 2. The machine will automatically power down. When it has shut down, take a snapshot. 
@@ -295,7 +296,7 @@ In case you prefer some quick results, we [prepared some scripts](https://github
 		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own.
 4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
-4. Start `Ubuntu 1` and execute the following:
+4. Finally, start `Ubuntu 1` and execute the following:
 
 		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
 		/bin/bash /etc/swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
