@@ -21,7 +21,7 @@ echo "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 \
     zk://$ZOOKEEPER_SERVERS\"" \
 | sudo tee /etc/default/docker
 
-# restart the service to apply new options: 
+# restart the service to apply new options:
 sudo service docker restart
 
 # make this machine join the Docker Swarm cluster:
