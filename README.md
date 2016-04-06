@@ -287,8 +287,9 @@ In case you prefer some quick results, we [prepared some scripts](https://github
 		/bin/bash tutorial-swarm-storm/scripts/installDocker.sh && \
 		sudo cp tutorial-swarm-storm/scripts/{init.sh,killStorm.sh,restartManager.sh,storm.sh,swarm.sh} /etc/ && \
 		sudo shutdown -h now
-2. Let's call this machine `Ubuntu 1`. Once the machine is shutdown, take a snapshot. 
-3. Wanted to machines from the image you're just taking, using the following customisation script
+Let's call this machine `Ubuntu 1`.
+2.  Once the machine is shutdown, take a snapshot. 
+3. Launch two machines from the image you just took, using the following customisation script:
 
 		#!/bin/bash
 		/bin/bash /etc/init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
