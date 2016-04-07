@@ -7,30 +7,23 @@ ZOOKEEPER_SERVERS=$1
 docker ps
 
 # launch the ZooKeeper ensemble:
-docker -H tcp://zk1.openstack.baqend.com:2375 run -d --restart=always \
+# Put all ZooKeeper server IPs into an array:
+IFS=', ' read -r -a ZOOKEEPER_SERVERS_ARRAY <<< "$ZOOKEEPER_SERVERS"
+for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"; do
+    ZKID=$(($index+1))
+    ZK=${ZOOKEEPER_SERVERS_ARRAY[index]}
+    docker -H tcp://$ZK:2375 run -d --restart=always \
       -p 2181:2181 \
       -p 2888:2888 \
       -p 3888:3888 \
       -v /var/lib/zookeeper:/var/lib/zookeeper \
       -v /var/log/zookeeper:/var/log/zookeeper  \
-      --name zk1 \
-      baqend/zookeeper $ZOOKEEPER_SERVERS 1
-docker -H tcp://zk2.openstack.baqend.com:2375 run -d --restart=always \
-      -p 2181:2181 \
-      -p 2888:2888 \
-      -p 3888:3888 \
-      -v /var/lib/zookeeper:/var/lib/zookeeper \
-      -v /var/log/zookeeper:/var/log/zookeeper  \
-      --name zk2 \
-      baqend/zookeeper $ZOOKEEPER_SERVERS 2
-docker -H tcp://zk3.openstack.baqend.com:2375 run -d --restart=always \
-      -p 2181:2181 \
-      -p 2888:2888 \
-      -p 3888:3888 \
-      -v /var/lib/zookeeper:/var/lib/zookeeper \
-      -v /var/log/zookeeper:/var/log/zookeeper  \
-      --name zk3 \
-      baqend/zookeeper $ZOOKEEPER_SERVERS 3
+      --name zk$ZKID \
+      baqend/zookeeper $ZOOKEEPER_SERVERS $ZKID
+done
+
+echo "let's wait a little..."
+sleep 30
 
 # launch the Swarm manager
 docker run -d --restart=always \
@@ -43,8 +36,10 @@ echo "let's wait a little..."
 sleep 30
 
 # check ZooKeeper health:
-for zk in zk1 zk2 zk3; do
-    echo "checking $zk:"
+for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"; do
+    ZKID=$(($index+1))
+    ZK=zk$ZKID
+    echo "checking $ZK:"
 	docker exec -it $zk bin/zkServer.sh status
 done
 
