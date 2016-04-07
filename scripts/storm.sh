@@ -57,3 +57,10 @@ for (( i=1; i <= $SUPERVISORS; i++ )); do
            -c nimbus.host=nimbus \
            -c supervisor.slots.ports=6700,6701,6702,6703
 done
+
+
+# Let's have a look at the Swarm cluster:
+docker info
+
+# let's have a look at the containers
+docker ps

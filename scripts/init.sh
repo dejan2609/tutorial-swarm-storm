@@ -24,8 +24,9 @@ echo "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 \
 # restart the service to apply new options:
 sudo service docker restart
 
-# wait a little:
-sleep 10
+echo "let's wait a little..."
+sleep 30
+
 
 # make this machine join the Docker Swarm cluster:
 docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS

@@ -39,8 +39,15 @@ docker run -d --restart=always \
       -v /etc/docker:/etc/docker \
       swarm manage zk://$ZOOKEEPER_SERVERS
 
-# wait a little:
-sleep 10
+echo "let's wait a little..."
+sleep 30
+
+# check ZooKeeper health:
+for zk in zk1 zk2 zk3; do
+    echo "checking $zk:"
+	docker exec -it $zk bin/zkServer.sh status
+done
+
 
 # check containers
 docker ps
@@ -55,8 +62,9 @@ export DOCKER_HOST=tcp://127.0.0.1:2376
 # restart the manager just to make sure:
 docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | awk '{if(NR>1)print $1;}')
 
-# wait a little:
-sleep 10
+echo "let's wait a little..."
+sleep 30
+
 
 # Let's have a look at the Swarm cluster:
 docker info

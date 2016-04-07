@@ -53,10 +53,10 @@ Here are the fast-forward instructions:
 4. Finally, start `Ubuntu 1` and execute the following:
  
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
-		sudo bash init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
-		sudo bash swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com && \
-		export DOCKER_HOST=tcp://127.0.0.1:2376 && \
-		bash storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
+		ZOOKEEPER=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com && \
+		sudo bash init.sh $ZOOKEEPER manager && \
+		. swarm.sh $ZOOKEEPER && \
+		. storm.sh $ZOOKEEPER 3
 
 You should now be able to access the Storm UI under `http://<manager-ip>:8080`!  
 Furthermore, when you type in
@@ -141,7 +141,7 @@ Time to get to the interesting stuff!
 
 ### Create the Swarm Cluster
 
-If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` reachable via `zk1.openstack.baqend.com` and is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to se tup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
+If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` reachable via `zk1.openstack.baqend.com` and is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to setup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
 
 1. Connect to `Ubuntu 1` via SSH.
 2. Then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
