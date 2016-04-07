@@ -40,7 +40,7 @@ for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"; do
     ZKID=$(($index+1))
     ZK=zk$ZKID
     echo "checking $ZK:"
-	docker exec -it $zk bin/zkServer.sh status
+	docker exec -it $ZK bin/zkServer.sh status
 done
 
 
