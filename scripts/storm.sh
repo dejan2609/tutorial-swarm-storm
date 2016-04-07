@@ -48,8 +48,8 @@ for (( i=1; i <= $SUPERVISORS; i++ )); do
       docker run \
           -d \
           --label cluster=storm \
-          --label container=supervisor \
-          -e affinity:container!=supervisor \
+          --label role=supervisor \
+          -e affinity:role!=supervisor \
           -e STORM_ZOOKEEPER_SERVERS=$ZOOKEEPER_SERVERS \
           --net stormnet \
           --restart=always \

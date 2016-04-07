@@ -50,7 +50,7 @@ Here are the fast-forward instructions:
 		./init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own. 
 4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
-5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `8080` (Storm UI) are required.
+5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) are required.
 4. Finally, start `Ubuntu 1` and execute the following:
  
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
@@ -135,7 +135,7 @@ and **take a snapshot** of it.
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
 8. Now set your DNS in such a way that the first hostname in the list (`zk1...`) points towards `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started.
-9. Finally, configure your security settings to allow connections between the machines on ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `8080` (Storm UI). 
+9. Finally, configure your security settings to allow connections between the machines on ports  `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment). If you want to visit the Storm UI from the outside, you'll also have to open port `8080`.
 
 
 Time to get to the interesting stuff!
@@ -276,22 +276,22 @@ To make sure that these are running on the manager node, we specified a **constr
 		docker run \
 		    -d \
 		    --label cluster=storm \
-		    --label container=supervisor \
-			-e affinity:container!=supervisor \
+		    --label role=supervisor \
+			-e affinity:role!=supervisor \
 		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
 		    --net stormnet \
 		    --restart=always \
 		    baqend/storm supervisor \
 		     -c nimbus.host=nimbus \
 		     -c supervisor.slots.ports=6700,6701,6702,6703
-Since we do not care where exactly the individual supervisors are running, we did not specify any constraints here. However, in order to prevent two supervisors from being hosted on one machine unless there is no free machine available, we did specify an **affinity**: `affinity:container!=supervisor`. 
-4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP, you can access the UI via `http://<manager-ip>:8080`. Make sure that you have three supervisors running.
+Since we do not care where exactly the individual supervisors are running, we did not specify any constraints here. However, in order to prevent two supervisors from being hosted on one machine, we did specify a **label affinity**: `affinity:role!=supervisor`. 
+4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP and is open on port `8080`, you can have a look at the Storm UI under `http://<manager-ip>:8080`. Make sure that you have three supervisors running.
 
 ### (Remote) Topology Deployment
 
 Deploying a topology can now be done from any server that has a Docker daemon running and is in the same network as the manager machine. The following command assumes that your topology fatjar is a file called `topology.jar` in your current working directory:
 
-	docker run \
+	docker -H tcp://127.0.0.1:2375 run \
 	   -it \
 	   --rm \
 	   -v $(readlink -m topology.jar):/topology.jar \
@@ -301,7 +301,8 @@ Deploying a topology can now be done from any server that has a Docker daemon ru
 	       main.class \
 	       topologyArgument1 \
 	       topologyArgument2
-Since relative paths are not supported, we use `readlink -m topology.jar` which produces an absolute path for `topology.jar`. You can also provide an absolute path directly.
+**Note:** This command will spawn a Docker container, deploy the topology and then remove the container. You should provide the `-H tcp://127.0.0.1:2375` argument to make sure the container is started on the machine you are currently working on; if you left the scheduling to Docker Swarm, the deployment might fail because the spawning host does not have the topology file.  
+By the way, we use `readlink -m topology.jar` which produces an absolute path for `topology.jar`, because relative paths are not supported. You can also provide an absolute path directly, though.
 
 Killing the topology can either be done via the Storm web UI interactively or, assuming the running topology is called `runningTopology`, like this:
 
@@ -311,6 +312,7 @@ Killing the topology can either be done via the Storm web UI interactively or, a
 	   baqend/storm \
 	     -c nimbus.host=<manager-ip> \
 	     kill runningTopology
+The host argument is not required here, because the statement stands on its own and has no file dependencies.
 
 ### Shutting Down the Storm Cluster
 
