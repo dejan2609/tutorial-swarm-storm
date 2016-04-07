@@ -31,7 +31,7 @@ Here are the fast-forward instructions:
 1. Connect to a server via SSH -- let's call it `Ubuntu 1` -- and execute the following:
 
 		sudo apt-get install git -y && \
-		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
+		cd /home/ubuntu/ && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
 		chmod +x tutorial-swarm-storm/scripts/* && \
 		cd tutorial-swarm-storm/scripts/ && \
@@ -55,9 +55,14 @@ Here are the fast-forward instructions:
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
 		sudo bash init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com manager && \
 		sudo bash swarm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com && \
-		sudo bash storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
+		export DOCKER_HOST=tcp://127.0.0.1:2376 && \
+		bash storm.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
 
-You should now be able to access the Storm UI under `http://<manager-ip>:8080`! 
+You should now be able to access the Storm UI under `http://<manager-ip>:8080`!  
+Furthermore, when you type in
+
+	docker info
+you should see that the UI and the Nimbus containers are running on the same machine as the Swarm manager and that the supervisor containers are all running on different machines.
 
 ### Prepare an Image
 
