@@ -50,7 +50,7 @@ Here are the fast-forward instructions:
 		./init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own. 
 4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
-5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper) and `2375` (Docker Swarm) are required.
+5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `8080` (Storm UI) are required.
 4. Finally, start `Ubuntu 1` and execute the following:
  
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
@@ -135,7 +135,7 @@ and **take a snapshot** of it.
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
 8. Now set your DNS in such a way that the first hostname in the list (`zk1...`) points towards `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started.
-9. Finally, configure your security settings to allow connections between the machines on ports `2181`, `2888`, `3888` (ZooKeeper) and `2375` (Docker Swarm). 
+9. Finally, configure your security settings to allow connections between the machines on ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `8080` (Storm UI). 
 
 
 Time to get to the interesting stuff!
