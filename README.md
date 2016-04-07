@@ -48,7 +48,7 @@ Here are the fast-forward instructions:
 		cd tutorial-swarm-storm/scripts/ && \
 		chmod +x ./* && \
 		./init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
-**Note:** You'll have to replace the hostnames in the comma-separated list above with your own.
+**Note:** You'll have to replace the hostnames in the comma-separated list above with your own. 
 4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
 5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper) and `2375` (Docker Swarm) are required.
 4. Finally, start `Ubuntu 1` and execute the following:
@@ -58,7 +58,7 @@ Here are the fast-forward instructions:
 		sudo bash init.sh $ZOOKEEPER manager && \
 		. swarm.sh $ZOOKEEPER && \
 		. storm.sh $ZOOKEEPER 3
-**Note:** Again, remember replacing the hostnames with your own!
+**Note:** Again, remember replacing the hostnames with your own. 
 
 You should now be able to access the Storm UI under `http://<manager-ip>:8080`!  
 Furthermore, when you type in
