@@ -1,6 +1,7 @@
-# A Tutorial on Deploying Apache Storm with Docker Swarm
+# Tutorial: Deploying Apache Storm on Docker Swarm
 
-For our upcoming **query caching and continuous query** features, we rely on [Apache Storm](http://storm.apache.org/) for low-latency data processing. Several projects have dedicated themselves to enabling multi-server Storm deployments on top of Docker (e.g. [wurstmeister/storm-docker](https://github.com/wurstmeister/storm-docker) or [viki-org/storm-docker](https://github.com/viki-org/storm-docker)), but scaling beyond server-limits always seems to make things complicated. Since scalability and ease-of-operation is key for our deployment, we have adopted Docker Swarm from the beginning and are very happy with how smoothly everything is humming along. With this tutorial, we'd like to share our experiences, raise your interest in the **Baqend Real-Time API** we'll be releasing soon and ultimately increase the hype for Docker Swarm (because it is just awesome!) :-)
+For our upcoming **query caching and continuous query** features of Baqend Cloud, we rely on [Apache Storm](http://storm.apache.org/) for low-latency data processing. Several projects have dedicated themselves to enabling multi-server Storm deployments on top of Docker (e.g. [wurstmeister/storm-docker](https://github.com/wurstmeister/storm-docker) or [viki-org/storm-docker](https://github.com/viki-org/storm-docker)), but scaling beyond server-limits always seems to make things complicated. Since scalability and ease-of-operation is key for our deployment, we have adopted Docker Swarm from the beginning and are very happy with how smoothly everything is humming along. With this tutorial, we'd like to share our experiences, raise your interest in the Baqend Real-Time API we'll be releasing soon and ultimately increase the hype for Docker Swarm (because it is just awesome!) :-)  
+If you are new to Swarm, have a look at our [AWS Meetup Docker slides](http://www.slideshare.net/felixgessert/building-a-globalscale-multitenant-cloud-platform-on-aws-and-docker-lessons-learned)!
  
 ## What We Are Going to Do
 
@@ -10,12 +11,12 @@ We will start by describing the tutorial deployment and explain how everything w
 
 ### Overview: Deployment
 
-The illustration below shows the tutorial deployment:
+The illustration below shows the architecture of the deployment:
 
 ![An overview of our tutorial deployment.](https://raw.githubusercontent.com/Baqend/tutorial-swarm-storm/master/overview.png)
 
 You'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, you will only talk to one of the machines, though, (`Ubuntu 1`) and it will for the most part feel like having a single Docker daemon.  
-When Swarm is in place, you'll create an overlay network (`stormnet`) to enable communication between Docker containers hosted on the different Swarm nodes. Finally, you will set up a full-fledged Storm cluster that uses the existing ZooKeeper ensemble for coordination and `stormnet` for inter-node communication. While the supervisor containers will be distributed according to a one-per-server schedule, the Nimbus and UI containers will be spawned on the manager node (`Ubuntu 1`).  
+When Swarm is in place, you'll create an overlay network (`stormnet`) to enable communication between Docker containers hosted on the different Swarm nodes. Finally, you will set up a full-fledged Storm cluster that uses the existing ZooKeeper ensemble for coordination and `stormnet` for inter-node communication. While the supervisor containers will be distributed with a one-per-server strategy, the Nimbus and UI containers will be spawned on the manager node (`Ubuntu 1`).  
 Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP and open port `8080`!); without it, you won't be able to have a look at the beautiful Storm UI ;-)
 
 ## Step-By-Step Guide
@@ -24,8 +25,8 @@ We are using hostnames `zk1.cloud`, `zk2.cloud` and `zk3.cloud` for the three Ub
 
 ### TL;DR
 
-For those among you who prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! For the detailed step-by-step explanations, see below.  
-Here are the fast-forward instructions:
+For those among you who prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! They are all you need to deploy Swarm and Storm. However, for the sake of comprehensibility, we also provide a detailed step-by-step walk-through directly afterwards.  
+So before we go through everything in detail, here are the fast-forward instructions:
 
 1. Create a Ubuntu 14.04 server -- let's call it `Ubuntu 1` -- and connect to it via SSH. Then, execute the following to checkout the tutorial scripts and install Docker:
 
@@ -91,7 +92,7 @@ and then paste the following and save:
 		ZOOKEEPER_SERVERS=$1
 		
 		# second script argument: the role of this node:
-		# ("manager" for the Swarm manager node; plain worker node else)
+		# ("manager" for the Swarm manager node; leave empty else)
 		ROLE=$2
 		
 		# the IP address of this machine:
@@ -189,8 +190,7 @@ This will do it for the current session and also make sure it will be done again
 
 ### Health Check
 
-Now everything should be up and running fine.  
-Type in
+Now everything should be up and running. Type in
 
 	docker info
 to check cluster status on the manager node. You should see 3 running workers similar to this:
@@ -320,6 +320,18 @@ Since every Storm-related container is labelled with `cluster=storm`, you can ki
 ## Don't Forget About Security!
 
 In this tutorial, we demonstrated how to get a distributed Storm cluster up and running on top of Docker with a multi-node ZooKeeper ensemble for high availability and fault-tolerance. In order to prevent the complexity of this tutorial from going through the roof, though, we stepped over how to **[configure Docker Swarm for TLS](https://docs.docker.com/swarm/configure-tls/)**. If you are planning to use Docker Swarm in a business-critical application, you should definitely put some effort into this aspect of deployment! 
+
+## How Is Baqend Using Apache Storm?
+
+We are harnessing Storm's power to provide low-latency streaming queries and query caching:
+
+### Continuous Queries
+If the continuous query feature is enabled for your app, our Apache Storm cluster receives both your continuous queries and all your write operations and cross-matches them: Every time an object is written, all registered continuous queries are matched against it. Since Storm is keeping track of all the query result sets, it can detect both new matches and new mismatches and notify you of any change as soon as it happens.
+
+### Query Caching
+For query caching, we use these notifications for proactive cache invalidation: Baqend Cloud caches a query result with a reasonable TTL and proactively invalidates a cached query result as soon as a change is registered.  Since our Storm-empowered matching pipeline imposes a latency overhead of only a few milliseconds, you get your data significantly faster within tight staleness bounds.
+
+Both features are going to be available in Baqend Cloud soon and we will publish more specifics on the architecture and benchmarking results in the near future on the Baqend Tech Blog, so stay tuned!
 
 ## Closing Remarks
 
