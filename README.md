@@ -88,6 +88,7 @@ So let's begin:
 		sudo nano /etc/init.sh
 and then paste the following and save:
 
+		#!/bin/bash
 		# first script argument: the servers in the ZooKeeper ensemble:
 		ZOOKEEPER_SERVERS=$1
 		
@@ -99,19 +100,22 @@ and then paste the following and save:
 		PRIVATE_IP=$(/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 		
 		# define label for the manager node:
-		if [ $ROLE == "manager" ];then LABELS="--label server=manager";else LABELS="";fi
+		if [[ $ROLE == "manager" ]];then LABELS="--label server=manager";else LABELS="";fi
 		# define default options for Docker Swarm:
-		echo "DOCKER_OPTS=\"-H tcp://$PRIVATE_IP:2375 \
+		echo "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 \
 		    -H unix:///var/run/docker.sock \
 		    --cluster-advertise eth0:2375 \
-			$LABELS \
+		    $LABELS \
 		    --cluster-store \
 		    zk://$ZOOKEEPER_SERVERS\"" \
-		| tee /etc/default/docker
-
+		| sudo tee /etc/default/docker
+		
 		# restart the service to apply new options:
-		service docker restart
-
+		sudo service docker restart
+		
+		echo "let's wait a little..."
+		sleep 30
+		
 		# make this machine join the Docker Swarm cluster:
 		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
 5. It is now time to shut down the machine 
@@ -120,6 +124,7 @@ and then paste the following and save:
 and take a snapshot of it. 
 6. Now launch two more machines (`Ubuntu 2` and `Ubuntu 3`) from the snapshot image, providing the following as an init/customisation script:
 
+		#!/bin/bash
 		/bin/bash /etc/init.sh \
 			zk1.cloud,zk2.cloud,zk3.cloud
 **Note:** If you are using OpenStack, you can provide the script as *customisation script*. In AWS, it is called *user data*.
