@@ -21,6 +21,7 @@ docker network ls
 docker run \
     -d \
     --label cluster=storm \
+    --label role=nimbus \
     -e constraint:server==manager \
     -e STORM_ZOOKEEPER_SERVERS=$ZOOKEEPER_SERVERS \
     --net stormnet \
@@ -34,6 +35,7 @@ docker run \
 docker run \
     -d \
     --label cluster=storm \
+    --label role=ui \
     -e constraint:server==manager \
     -e STORM_ZOOKEEPER_SERVERS=$ZOOKEEPER_SERVERS \
     --net stormnet \

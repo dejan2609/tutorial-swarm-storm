@@ -174,7 +174,7 @@ By specifying the `-H ...` argument, we are able to launch the ZooKeeper contain
 4. Now it's time to start the Swarm manager:
 
 		docker run -d --restart=always \
-		      --label container=manager \
+		      --label role=manager \
 		      -p 2376:2375 \
 		      -v /etc/docker:/etc/docker \
 		      swarm manage zk://zk1.cloud,zk2.cloud,zk3.cloud
@@ -222,7 +222,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ UpdatedAt: 2016-04-03T15:40:15Z
 The important part is the line with `Status: Healthy` for each node. If you observe something like `Status: Pending` or if not all nodes show up, even though you are not experiencing any errors elsewhere, try restarting the manager container like so 
 
-	docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | awk '{if(NR>1)print $1;}')
+	docker restart $(docker ps -a --no-trunc --filter "label=role=manager" | awk '{if(NR>1)print $1;}')
 and check again.
 
 ### Setup the Storm Cluster
@@ -241,6 +241,7 @@ First, start the UI
 		docker run \
 		    -d \
 		    --label cluster=storm \
+		    --label role=ui \
 		    -e constraint:server==manager \
 		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \
@@ -254,6 +255,7 @@ and the Nimbus:
 		docker run \
 		    -d \
 		    --label cluster=storm \
+		    --label role=nimbus \
 		    -e constraint:server==manager \
 		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \

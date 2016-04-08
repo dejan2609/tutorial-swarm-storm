@@ -27,7 +27,7 @@ sleep 30
 
 # launch the Swarm manager
 docker run -d --restart=always \
-      --label container=manager \
+      --label role=manager \
       -p 2376:2375 \
       -v /etc/docker:/etc/docker \
       swarm manage zk://$ZOOKEEPER_SERVERS
@@ -55,7 +55,7 @@ EOF
 export DOCKER_HOST=tcp://127.0.0.1:2376
 
 # restart the manager just to make sure:
-docker restart $(docker ps -a --no-trunc --filter "label=container=manager" | awk '{if(NR>1)print $1;}')
+docker restart $(docker ps -a --no-trunc --filter "label=role=manager" | awk '{if(NR>1)print $1;}')
 
 echo "let's wait a little..."
 sleep 30
