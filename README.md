@@ -6,29 +6,28 @@ For our upcoming **query caching and continuous query** features, we rely on [Ap
 
 ### Outline
 
-We will start by describing the components of our tutorial deployment and explain how everything will be working together. After that, we'll get to the meat and bones of this tutorial and provide a step-by-step guide on how to deploy a Docker Swarm cluster and a multi-node Apache Storm cluster on top. We will also cover some routine tasks, both related to Storm (in particular deploying and killing a topology from a remote server) and Swarm (e.g. restarting the manager node and killing the entire Storm cluster with one single-line statement).
+We will start by describing the tutorial deployment and explain how everything will be working together. After that, we'll provide the minimal set of instructions required to set everything up in the *TL;DR section* (using some bash scripts we prepared) and then get to the meat and bones of this tutorial and walk you through the entire ordeal of deploying a Docker Swarm cluster and a multi-node Apache Storm cluster on top step-by-step. We will also cover routine tasks, both related to Storm (in particular deploying and killing a topology from a remote server) and Swarm (e.g. restarting the manager node and killing the entire Storm cluster).
 
 ### Overview: Deployment
 
-The illustration below shows our tutorial deployment:
+The illustration below shows the tutorial deployment:
 
-![An overview of our tutorial deployment.](overview.PNG)
+![An overview of our tutorial deployment.](https://raw.githubusercontent.com/Baqend/tutorial-swarm-storm/master/overview.png)
 
-You'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, you will only talk to one of the machines, though, (`Ubuntu 1`) and it will (for the most part) just feel like having a single Docker daemon.  
-When Swarm is in place, you'll set up a Storm cluster on top that uses the existing ZooKeeper ensemble for coordination.  
-
-Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP if you play along!), because otherwise you won't be able to have a look at the beautiful Storm UI ;-)
+You'll have 3 machines running Ubuntu Server 14.04, each of which will be running a Docker daemon with several containers inside. After the initial setup, you will only talk to one of the machines, though, (`Ubuntu 1`) and it will for the most part feel like having a single Docker daemon.  
+When Swarm is in place, you'll create an overlay network (`stormnet`) to enable communication between Docker containers hosted on the different Swarm nodes. Finally, you will set up a full-fledged Storm cluster that uses the existing ZooKeeper ensemble for coordination and `stormnet` for inter-node communication. While the supervisor containers will be distributed according to a one-per-server schedule, the Nimbus and UI containers will be spawned on the manager node (`Ubuntu 1`).  
+Public access to the `Ubuntu 1` machine is required (i.e. assign a public IP and open port `8080`!); without it, you won't be able to have a look at the beautiful Storm UI ;-)
 
 ## Step-By-Step Guide
 
-We are using hostnames `zk1.openstack.baqend.com`, `zk2.openstack.baqend.com` and `zk3.openstack.baqend.com` for the three Ubuntu machines. Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames in the `readme.me` and you should be able to copy-paste most of the statements into the shell as we go along.
+We are using hostnames `zk1.cloud`, `zk2.cloud` and `zk3.cloud` for the three Ubuntu machines. Since the the ZooKeeper servers and the manager node are two different roles conceptually, we are also using `manager.swarm` and `manager.swarm.baqend.com` for the  private and public IP address of the manager node; even though `Ubuntu 1` plays the role of ZooKeeper 1 and the manager in this tutorial, you can have two different servers in your deployment for these two. Just check out the [tutorial on GitHub](https://github.com/Baqend/tutorial-swarm-storm), find-and-replace our hostnames with your hostnames in the `readme.me` and you should be able to copy-paste most of the statements into the shell as we go along.
 
 ### TL;DR
 
-In case you prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! For the detailed step-by-step explanations, see below.  
+For those among you who prefer some quick results, we [prepared some scripts](https://github.com/Baqend/tutorial-swarm-storm/tree/master/scripts) for you! For the detailed step-by-step explanations, see below.  
 Here are the fast-forward instructions:
 
-1. Connect to a server via SSH -- let's call it `Ubuntu 1` -- and execute the following:
+1. Create a Ubuntu 14.04 server -- let's call it `Ubuntu 1` -- and connect to it via SSH. Then, execute the following to checkout the tutorial scripts and install Docker:
 
 		sudo apt-get install git -y && \
 		cd /home/ubuntu/ && \
@@ -38,40 +37,39 @@ Here are the fast-forward instructions:
 		sudo bash installDocker.sh && \
 		sudo usermod -aG docker ubuntu && \
 		sudo shutdown -h now
-
 2. The machine will automatically power down. When it has shut down, take a snapshot. 
-3. Launch two machines from the image you just took, using the following customisation script:
+3. Launch two machines (`Ubuntu 2` and `Ubuntu 3`) from the image you just took, using the following customisation script to make them Swarm worker nodes:
 
 		#!/bin/bash
 		cd /home/ubuntu/ && rm -rf tutorial-swarm-storm && \
 		git clone https://github.com/Baqend/tutorial-swarm-storm.git && \
 		cd tutorial-swarm-storm/scripts/ && \
 		chmod +x ./* && \
-		./init.sh zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
+		./init.sh zk1.cloud,zk2.cloud,zk3.cloud
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own. 
-4. Set up the DNS in such a way that the first hostname in the list points towards `Ubuntu 1` and the others point towards the other two machines.
-5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) are required.
-4. Finally, start `Ubuntu 1` and execute the following:
+4. Set up the DNS in such a way that the first hostname in the list (`zk1.cloud`) points towards `Ubuntu 1` and the others point towards the other two machines. Also make sure that `manager.swarm.baqend.com` and `manager.swarm` are resolved to the public and private IP addresses of `Ubuntu 1`, respectively.
+5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) are required. `manager.swarm.baqend.com:8080` has to be accessible from the outside for the Storm UI.
+4. Finally, start `Ubuntu 1` and execute the following to set up the ZooKeeper ensemble, Swarm and Storm:
  
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
-		ZOOKEEPER=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com && \
+		ZOOKEEPER=zk1.cloud,zk2.cloud,zk3.cloud && \
 		sudo bash init.sh $ZOOKEEPER manager && \
 		. swarm.sh $ZOOKEEPER && \
 		. storm.sh $ZOOKEEPER 3
 **Note:** Again, remember replacing the hostnames with your own. 
 
-You should now be able to access the Storm UI under `http://<manager-ip>:8080`!  
+You should now be able to access the Storm UI under `http://manager.swarm.baqend.com:8080`!  
 Furthermore, when you type in
 
 	docker info
-you should see that the UI and the Nimbus containers are running on the same machine as the Swarm manager and that the supervisor containers are all running on different machines.
+on the manager node, you should see that the UI and the Nimbus containers are running on the same machine as the Swarm manager and that the supervisor containers are all running on different machines.
 
-### Prepare an Image
+### Let's Do It Again: Prepare an Image
 
-In order to make this entire procedure not too repetitive, you'll do the preparation steps on only one of the machines, shut it down and take a snapshot (image). You will then create the other machines from this snapshot.  
+Okay, let's go through the individual steps one after the other now. In order to make this entire procedure not too repetitive, you'll do the preparation steps on only one of the machines, shut it down and take a snapshot (image). You will then create the other machines from this snapshot.  
 So let's begin:
 
-1. Connect to one of the servers via SSH and install Docker by executing the following:
+1. Create `Ubuntu 1` as a Ubuntu 14.04 server. Connect to it via SSH and install Docker by executing the following:
 
 		sudo apt-get update && sudo apt-get install apt-transport-https ca-certificates && sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D \
 		&& echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | sudo tee -a /etc/apt/sources.list.d/docker.list \
@@ -108,34 +106,30 @@ and then paste the following and save:
 			$LABELS \
 		    --cluster-store \
 		    zk://$ZOOKEEPER_SERVERS\"" \
-		| sudo tee /etc/default/docker
+		| tee /etc/default/docker
 
 		# restart the service to apply new options:
-		# in principle, a simple
-		#   sudo service docker restart
-		# should suffice, but sometimes it does not, so do this to make sure:
-		sudo service docker stop
-		sudo rm -r /var/lib/docker/network # see issue 17083; https://github.com/docker/docker/issues/17083
-		sudo service docker start
+		service docker restart
 
 		# make this machine join the Docker Swarm cluster:
 		docker run -d --restart=always swarm join --advertise=$PRIVATE_IP:2375 zk://$ZOOKEEPER_SERVERS
 5. It is now time to shut down the machine 
 
 		sudo shutdown -h now
-and **take a snapshot** of it. 
-6. Now launch two more machines from this image (snapshot), providing the following as an init/customisation script:
+and take a snapshot of it. 
+6. Now launch two more machines (`Ubuntu 2` and `Ubuntu 3`) from the snapshot image, providing the following as an init/customisation script:
 
 		/bin/bash /etc/init.sh \
-			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
-7. Restart the machine you have taken the image from and execute the following:
+			zk1.cloud,zk2.cloud,zk3.cloud
+**Note:** If you are using OpenStack, you can provide the script as *customisation script*. In AWS, it is called *user data*.
+7. Restart the machine you have taken the snapshot of (`Ubuntu 1`), connect to it and execute the following:
  
 		/bin/bash /etc/init.sh \
-			zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
+			zk1.cloud,zk2.cloud,zk3.cloud \
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
-8. Now set your DNS in such a way that the first hostname in the list (`zk1...`) points towards `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started.
-9. Finally, configure your security settings to allow connections between the machines on ports  `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment). If you want to visit the Storm UI from the outside, you'll also have to open port `8080`.
+8. Now set up your DNS in such a way that the first hostname in the list (`zk1...`) points towards the manager on `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started, i.e. `Ubuntu 2` and `Ubuntu 3`. Also have `manager.swarm.baqend.com` and `manager.swarm` resolved to the public and private IP addresses of `Ubuntu 1`, respectively.
+9. Finally, configure your security settings to allow connections between the machines on ports  `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment). If you want to visit the Storm UI from the outside, you'll also have to make `manager.swarm.baqend.com:8080` open to the world.
 
 
 Time to get to the interesting stuff!
@@ -144,48 +138,47 @@ Time to get to the interesting stuff!
 
 ### Create the Swarm Cluster
 
-If nothing has gone wrong, you should have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` reachable via `zk1.openstack.baqend.com` and is the machine you have worked on so far and it is going to become the manager node for Swarm. In order to enable coordination among the Swarm nodes, you still have to setup the ZooKeeper ensemble and the Swarm manager. However, you'll only have to talk to `Ubuntu 1` from this point on:
+If nothing has gone wrong, you should now have three Ubuntu servers, each running a Docker daemon. `Ubuntu 1` should be reachable via `zk1.cloud` and `manager.swarm` in your private network and via `manager.swarm.baqend.com` from the outside (at least on port `8080`). This is the machine you have worked on so far and it is going to be the only machine you will talk to from this point on. In order to enable coordination among the Swarm nodes, you still have to setup the ZooKeeper ensemble and the Swarm manager:
 
-1. Connect to `Ubuntu 1` via SSH.
-2. Then perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
+1. Connect to `Ubuntu 1` via SSH and perform a quick health check. If Docker is installed correctly, the following will show a list of the running Docker containers (exactly 1 for Swarm and nothing else):
 
 		docker ps
 3. You are now good to launch one ZooKeeper node on every machine like this:
 
-		docker -H tcp://zk1.openstack.baqend.com:2375 run -d --restart=always \
+		docker -H tcp://zk1.cloud:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk1 \
-		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 1
-		docker -H tcp://zk2.openstack.baqend.com:2375 run -d --restart=always \
+		      baqend/zookeeper zk1.cloud,zk2.cloud,zk3.cloud 1
+		docker -H tcp://zk2.cloud:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk2 \
-		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 2
-		docker -H tcp://zk3.openstack.baqend.com:2375 run -d --restart=always \
+		      baqend/zookeeper zk1.cloud,zk2.cloud,zk3.cloud 2
+		docker -H tcp://zk3.cloud:2375 run -d --restart=always \
 		      -p 2181:2181 \
 		      -p 2888:2888 \
 		      -p 3888:3888 \
 		      -v /var/lib/zookeeper:/var/lib/zookeeper \
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk3 \
-		      baqend/zookeeper zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com 3
-Obviously, the `-p` commands expose the ports required by ZooKeeper per default. The two `-v` commands provide persistence in case of container failure by mapping the directories the ZooKeeper container uses to the corresponding host directories. The comma-separated list of hostnames tells ZooKeeper what servers are in the ensemble. This is the same for every node in the ensemble.  
-**The only variable is the ZooKeeper ID** (second argument), because it is unique for every container.
-4. Now it's time to start the swarm manager:
+		      baqend/zookeeper zk1.cloud,zk2.cloud,zk3.cloud 3
+By specifying the `-H ...` argument, we are able to launch the ZooKeeper containers on the different host machines. The `-p` commands expose the ports required by ZooKeeper per default. The two `-v` commands provide persistence in case of container failure by mapping the directories the ZooKeeper container uses to the corresponding host directories. The comma-separated list of hostnames tells ZooKeeper what servers are in the ensemble. This is the same for every node in the ensemble.  
+*The only variable is the ZooKeeper ID* (second argument), because it is unique for every container.
+4. Now it's time to start the Swarm manager:
 
 		docker run -d --restart=always \
 		      --label container=manager \
 		      -p 2376:2375 \
 		      -v /etc/docker:/etc/docker \
-		      swarm manage zk://zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com
-5. Finally, you only have to make sure that all future `docker run` statements are directed against the correct  daemon:
+		      swarm manage zk://zk1.cloud,zk2.cloud,zk3.cloud
+5. Now the Swarm cluster is running. However, we still have to tell the Docker client about it. So finally, you only have to make sure that all future `docker run` statements are directed to the Swarm manager container (which will do the scheduling) and not against the local Docker daemon:
 
 		cat << EOF | tee -a ~/.bash_profile
 			# this node is the master and therefore should be able to talk to the Swarm cluster:
@@ -203,7 +196,7 @@ Type in
 to check cluster status on the manager node. You should see 3 running workers similar to this:
 
 		Nodes: 3
-		 docker1: zk1.openstack.baqend.com:2375
+		 docker1: zk1.cloud:2375
 		  └ Status: Healthy
 		  └ Containers: 3
 		  └ Reserved CPUs: 0 / 1
@@ -211,7 +204,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, server=manager, storagedriver=devicemapper
 		  └ Error: (none)
 		  └ UpdatedAt: 2016-04-03T15:39:59Z
-		 docker2: zk2.openstack.baqend.com:2375
+		 docker2: zk2.cloud:2375
 		  └ Status: Healthy
 		  └ Containers: 2
 		  └ Reserved CPUs: 0 / 1
@@ -219,7 +212,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 		  └ Labels: executiondriver=native-0.2, kernelversion=3.13.0-40-generic, operatingsystem=Ubuntu 14.04.1 LTS, storagedriver=devicemapper
 		  └ Error: (none)
 		  └ UpdatedAt: 2016-04-03T15:39:45Z
-		 docker3: zk3.openstack.baqend.com:2375
+		 docker3: zk3.cloud:2375
 		  └ Status: Healthy
 		  └ Containers: 2
 		  └ Reserved CPUs: 0 / 1
@@ -234,8 +227,7 @@ and check again.
 
 ### Setup the Storm Cluster
 
-Now that Swarm is running, you will create an overlay network that spans all Swarm nodes and then spin up several containers for the individual Storm components.  
-The Nimbus and the UI will be hosted on the manager node, whereas the supervisors (i.e. Storm workers) will be scattered across all nodes in the Swarm cluster. 
+Now that Swarm is running, you will create an overlay network that spans all Swarm nodes and then spin up several containers for the individual Storm components. The Nimbus and the UI will be hosted on the manager node, whereas the supervisors (i.e. Storm workers) will be scattered across all nodes in the Swarm cluster, one per server. 
 
 1. First, create the overlay network `stormnet` like this 
 
@@ -250,7 +242,7 @@ First, start the UI
 		    -d \
 		    --label cluster=storm \
 		    -e constraint:server==manager \
-		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \
 		    --restart=always \
 		    --name ui \
@@ -263,7 +255,7 @@ and the Nimbus:
 		    -d \
 		    --label cluster=storm \
 		    -e constraint:server==manager \
-		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \
 		    --restart=always \
 		    --name nimbus \
@@ -271,6 +263,7 @@ and the Nimbus:
 		    baqend/storm nimbus \
 		      -c nimbus.host=nimbus
 To make sure that these are running on the manager node, we specified a **constraint**: `constraint:server==manager`.
+4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP and is open on port `8080`, you can check your Storm cluster using a web browser under `http://manager.swarm.baqend.com:8080`. However, there are no supervisors running, yet.
 3. To start 3 supervisors, fire the following statement 3 times:
 
 		docker run \
@@ -278,14 +271,14 @@ To make sure that these are running on the manager node, we specified a **constr
 		    --label cluster=storm \
 		    --label role=supervisor \
 			-e affinity:role!=supervisor \
-		    -e STORM_ZOOKEEPER_SERVERS=zk1.openstack.baqend.com,zk2.openstack.baqend.com,zk3.openstack.baqend.com \
+		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \
 		    --restart=always \
 		    baqend/storm supervisor \
 		     -c nimbus.host=nimbus \
 		     -c supervisor.slots.ports=6700,6701,6702,6703
-Since we do not care where exactly the individual supervisors are running, we did not specify any constraints here. However, in order to prevent two supervisors from being hosted on one machine, we did specify a **label affinity**: `affinity:role!=supervisor`. 
-4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP and is open on port `8080`, you can have a look at the Storm UI under `http://<manager-ip>:8080`. Make sure that you have three supervisors running.
+Since we do not care where exactly the individual supervisors are running, we did not specify any constraints or container names here. However, in order to prevent two supervisors from being hosted on one machine, we did specify a **label affinity**: `affinity:role!=supervisor`. If you need more supervisor containers, you'll have to add additional Swarm worker nodes (`Ubuntu 4`, `Ubuntu 5`, ...).
+4. Have a look at the Storm UI and make sure that you have three supervisors running.
 
 ### (Remote) Topology Deployment
 
@@ -296,13 +289,15 @@ Deploying a topology can now be done from any server that has a Docker daemon ru
 	   --rm \
 	   -v $(readlink -m topology.jar):/topology.jar \
 	   baqend/storm \
-	     -c nimbus.host=<manager-ip> \
+	     -c nimbus.host=manager.swarm \
 	     jar /topology.jar \
 	       main.class \
 	       topologyArgument1 \
 	       topologyArgument2
-**Note:** This command will spawn a Docker container, deploy the topology and then remove the container. You should provide the `-H tcp://127.0.0.1:2375` argument to make sure the container is started on the machine you are currently working on; if you left the scheduling to Docker Swarm, the deployment might fail because the spawning host does not have the topology file.  
+**Note:** This command will spawn a Docker container, deploy the topology and then remove the container. You should provide the `-H tcp://127.0.0.1:2375` argument to make sure the container is started on the machine you are currently working on; if you left the scheduling to Docker Swarm, the deployment might fail because the spawning host does not necessarily have the topology file.  
 By the way, we use `readlink -m topology.jar` which produces an absolute path for `topology.jar`, because relative paths are not supported. You can also provide an absolute path directly, though.
+
+### Killing a Topology
 
 Killing the topology can either be done via the Storm web UI interactively or, assuming the running topology is called `runningTopology`, like this:
 
@@ -310,13 +305,13 @@ Killing the topology can either be done via the Storm web UI interactively or, a
 	   -it \
 	   --rm \
 	   baqend/storm \
-	     -c nimbus.host=<manager-ip> \
+	     -c nimbus.host=manager.swarm \
 	     kill runningTopology
-The host argument is not required here, because the statement stands on its own and has no file dependencies.
+The host argument `-H ...` is not required here, because the statement stands on its own and has no file dependencies.
 
 ### Shutting Down the Storm Cluster
 
-Since every Storm-related container is marked with the label (`cluster=storm`), you can kill all of them with the following statement:
+Since every Storm-related container is labelled with `cluster=storm`, you can kill all of them with the following statement:
 
 	docker rm -f $(docker ps -a --no-trunc --filter "label=cluster=storm" | awk '{if(NR>1)print $1;}')
 
@@ -326,7 +321,7 @@ In this tutorial, we demonstrated how to get a distributed Storm cluster up and 
 
 ## Closing Remarks
 
-We created the tutorial for Docker version 1.10.3 and Swarm version 1.1.3. The tutorial itself as well as our Storm and ZooKeeper Docker images are available under the very permissive *Chicken Dance License v0.2*:
+We created the tutorial for Docker version 1.10.3 and Swarm version 1.1.3 and tested it both on OpenStack and AWS. The tutorial itself as well as our Storm and ZooKeeper Docker images are available under the very permissive *Chicken Dance License v0.2*:
 
 - **tutorial** at [GitHub](https://github.com/Baqend/tutorial-swarm-storm)
 - **baqend/storm Docker image** at [Docker Hub](https://hub.docker.com/r/baqend/storm/) and [GitHub](https://github.com/Baqend/docker-storm)
