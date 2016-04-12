@@ -41,7 +41,7 @@ for index in "${!ZOOKEEPER_SERVERS_ARRAY[@]}"; do
     ZKIP=${ZOOKEEPER_SERVERS_ARRAY[index]}
     ZK=zk$ZKID
     echo "checking $ZK:"
-	docker -H $ZKIP exec -it $ZK bin/zkServer.sh status
+	docker -H $ZKIP:2375 exec -it $ZK bin/zkServer.sh status
 done
 
 
