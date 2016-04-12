@@ -283,7 +283,7 @@ To make sure that these are running on the manager node, we specified a **constr
 		    --restart=always \
 		    baqend/storm supervisor \
 		     -c nimbus.host=nimbus \
-		     -c supervisor.slots.ports=6700,6701,6702,6703
+		     -c supervisor.slots.ports=[6700,6701,6702,6703]
 Since we do not care where exactly the individual supervisors are running, we did not specify any constraints or container names here. However, in order to prevent two supervisors from being hosted on one machine, we did specify a **label affinity**: `affinity:role!=supervisor`. If you need more supervisor containers, you'll have to add additional Swarm worker nodes (`Ubuntu 4`, `Ubuntu 5`, ...).
 4. Have a look at the Storm UI and make sure that you have three supervisors running.
 

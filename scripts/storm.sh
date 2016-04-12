@@ -57,7 +57,7 @@ for (( i=1; i <= $SUPERVISORS; i++ )); do
           --restart=always \
           baqend/storm supervisor \
            -c nimbus.host=nimbus \
-           -c supervisor.slots.ports=6700,6701,6702,6703
+           -c supervisor.slots.ports=[6700,6701,6702,6703]
 done
 
 
