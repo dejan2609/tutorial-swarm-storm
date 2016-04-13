@@ -175,8 +175,13 @@ If nothing has gone wrong, you should now have three Ubuntu servers, each runnin
 		      -v /var/log/zookeeper:/var/log/zookeeper  \
 		      --name zk3 \
 		      baqend/zookeeper zk1.cloud,zk2.cloud,zk3.cloud 3
-By specifying the `-H ...` argument, we are able to launch the ZooKeeper containers on the different host machines. The `-p` commands expose the ports required by ZooKeeper per default. The two `-v` commands provide persistence in case of container failure by mapping the directories the ZooKeeper container uses to the corresponding host directories. The comma-separated list of hostnames tells ZooKeeper what servers are in the ensemble. This is the same for every node in the ensemble.  
-*The only variable is the ZooKeeper ID* (second argument), because it is unique for every container.
+By specifying the `-H ...` argument, we are able to launch the ZooKeeper containers on the different host machines. The `-p` commands expose the ports required by ZooKeeper per default. The two `-v` commands provide persistence in case of container failure by mapping the directories the ZooKeeper container uses to the corresponding host directories. The comma-separated list of hostnames tells ZooKeeper what servers are in the ensemble. This is the same for every node in the ensemble. *The only variable is the ZooKeeper ID* (second argument), because it is unique for every container.  
+To check ZooKeeper health, you can do the following:
+
+		docker -H tcp://zk1.cloud:2375 exec -it zk1 bin/zkServer.sh status && \
+		docker -H tcp://zk2.cloud:2375 exec -it zk2 bin/zkServer.sh status && \
+		docker -H tcp://zk3.cloud:2375 exec -it zk3 bin/zkServer.sh status
+If your cluster is healthy, every node will report whether it is the leader or one of the followers.
 4. Now it's time to start the Swarm manager:
 
 		docker run -d --restart=always \
@@ -228,7 +233,7 @@ to check cluster status on the manager node. You should see 3 running workers si
 The important part is the line with `Status: Healthy` for each node. If you observe something like `Status: Pending` or if not all nodes show up, even though you are not experiencing any errors elsewhere, try restarting the manager container like so 
 
 	docker restart $(docker ps -a --no-trunc --filter "label=role=manager" | awk '{if(NR>1)print $1;}')
-and check again.
+and check again. (This may cause an error message; ignore it.)
 
 ### Setup the Storm Cluster
 
