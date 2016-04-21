@@ -187,7 +187,6 @@ If your cluster is healthy, every node will report whether it is the leader or o
 		docker run -d --restart=always \
 		      --label role=manager \
 		      -p 2376:2375 \
-		      -v /etc/docker:/etc/docker \
 		      swarm manage zk://zk1.cloud,zk2.cloud,zk3.cloud
 5. Now the Swarm cluster is running. However, we still have to tell the Docker client about it. So finally, you only have to make sure that all future `docker run` statements are directed to the Swarm manager container (which will do the scheduling) and not against the local Docker daemon:
 

@@ -29,7 +29,6 @@ sleep 30
 docker run -d --restart=always \
       --label role=manager \
       -p 2376:2375 \
-      -v /etc/docker:/etc/docker \
       swarm manage zk://$ZOOKEEPER_SERVERS
 
 echo "let's wait a little..."
