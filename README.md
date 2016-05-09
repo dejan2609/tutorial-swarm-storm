@@ -1,6 +1,6 @@
 # Tutorial: Deploying Apache Storm on Docker Swarmand
 
-**Updates**: Since the referenced docker images are constantly evolving, so is this tutorial. Both the [version we initially published](https://github.com/Baqend/tutorial-swarm-storm/tree/published) and the [most up-to-date one](https://github.com/Baqend/tutorial-swarm-storm) are available on GitHub. The list of updates is given below:
+**Updates**: Since the referenced docker images are constantly evolving, so is this tutorial. Both the [version we initially published](https://github.com/Baqend/tutorial-swarm-storm/tree/published) and the [most up-to-date one](https://github.com/Baqend/tutorial-swarm-storm) are available on GitHub. The list of updates implemented in this version is given below:
 
 - *May 9, 2016*: updated required UDP and TCP ports for Docker Swarm overlay networks; simplified Storm-related statements after image update
 
