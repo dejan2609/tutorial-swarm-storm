@@ -1,4 +1,10 @@
-# Tutorial: Deploying Apache Storm on Docker Swarm
+# Tutorial: Deploying Apache Storm on Docker Swarmand
+
+**Updates**: Since the referenced docker images are constantly evolving, so is this tutorial. Both the [version we initially published](https://github.com/Baqend/tutorial-swarm-storm/tree/published) and the [most up-to-date one](https://github.com/Baqend/tutorial-swarm-storm) are available on GitHub. The list of updates is given below:
+
+- *May 9, 2016*: updated required UDP and TCP ports for Docker Swarm overlay networks; simplified Storm-related statements after image update
+
+
 
 For our upcoming **query caching and continuous query** features of Baqend Cloud, we rely on [Apache Storm](http://storm.apache.org/) for low-latency data processing. Several projects have dedicated themselves to enabling multi-server Storm deployments on top of Docker (e.g. [wurstmeister/storm-docker](https://github.com/wurstmeister/storm-docker) or [viki-org/storm-docker](https://github.com/viki-org/storm-docker)), but scaling beyond server-limits always seems to make things complicated. Since scalability and ease-of-operation is key for our deployment, we have adopted Docker Swarm from the beginning and are very happy with how smoothly everything is humming along. With this tutorial, we'd like to share our experiences, raise your interest in the Baqend Real-Time API we'll be releasing soon and ultimately increase the hype for Docker Swarm (because it is just awesome!) :-)  
 If you are new to Swarm, have a look at our [AWS Meetup Docker slides](http://www.slideshare.net/felixgessert/building-a-globalscale-multitenant-cloud-platform-on-aws-and-docker-lessons-learned)!
@@ -49,7 +55,7 @@ So before we go through everything in detail, here are the fast-forward instruct
 		./init.sh zk1.cloud,zk2.cloud,zk3.cloud
 **Note:** You'll have to replace the hostnames in the comma-separated list above with your own. 
 4. Set up the DNS in such a way that the first hostname in the list (`zk1.cloud`) points towards `Ubuntu 1` and the others point towards the other two machines. Also make sure that `manager.swarm.baqend.com` and `manager.swarm` are resolved to the public and private IP addresses of `Ubuntu 1`, respectively.
-5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) are required. `manager.swarm.baqend.com:8080` has to be accessible from the outside for the Storm UI.
+5. Make sure the machines can talk to one another: Ports `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) are required. In addition, the [overlay network in docker swarm requires port 4789 (UDP) as well as 7946 (TCP/UDP)](https://docs.docker.com/engine/userguide/networking/dockernetworks/#an-overlay-network) and `manager.swarm.baqend.com:8080` has to be accessible from the outside for the Storm UI.
 4. Finally, start `Ubuntu 1` and execute the following to set up the ZooKeeper ensemble, Swarm and Storm:
  
 		cd /home/ubuntu/tutorial-swarm-storm/scripts/ && \
@@ -135,7 +141,7 @@ and take a snapshot of it.
 			manager
 This will set up a Swarm worker on this machine and will also label it as the Swarm manager.
 8. Now set up your DNS in such a way that the first hostname in the list (`zk1...`) points towards the manager on `Ubuntu 1` and the other two hostnames (`zk2...` and `zk3...`) point towards the other two machines you just started, i.e. `Ubuntu 2` and `Ubuntu 3`. Also have `manager.swarm.baqend.com` and `manager.swarm` resolved to the public and private IP addresses of `Ubuntu 1`, respectively.
-9. Finally, configure your security settings to allow connections between the machines on ports  `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment). If you want to visit the Storm UI from the outside, you'll also have to make `manager.swarm.baqend.com:8080` open to the world.
+9. Finally, configure your security settings to allow connections between the machines on ports  `2181`, `2888`, `3888` (ZooKeeper), `2375` (Docker Swarm) and `6627` (Storm, remote topology deployment) and also [open port 4789 (UDP) as well as 7946 (TCP/UDP) for the overlay network in Docker Swarm](https://docs.docker.com/engine/userguide/networking/dockernetworks/#an-overlay-network). If you want to visit the Storm UI from the outside, you'll also have to make `manager.swarm.baqend.com:8080` open to the world.
 
 
 Time to get to the interesting stuff!
@@ -257,8 +263,7 @@ First, start the UI
 		    --restart=always \
 		    --name ui \
 		    -p 8080:8080 \
-		    baqend/storm ui \
-		      -c nimbus.host=nimbus
+		    baqend/storm ui 
 and the Nimbus:
 
 		docker run \
@@ -271,8 +276,7 @@ and the Nimbus:
 		    --restart=always \
 		    --name nimbus \
 		    -p 6627:6627 \
-		    baqend/storm nimbus \
-		      -c nimbus.host=nimbus
+		    baqend/storm nimbus 
 To make sure that these are running on the manager node, we specified a **constraint**: `constraint:server==manager`.
 4. You can now access the Storm UI as though it would be running on the manager node: Given your manager node has a public IP and is open on port `8080`, you can check your Storm cluster using a web browser under `http://manager.swarm.baqend.com:8080`. However, there are no supervisors running, yet.
 3. To start 3 supervisors, fire the following statement 3 times:
@@ -285,9 +289,7 @@ To make sure that these are running on the manager node, we specified a **constr
 		    -e STORM_ZOOKEEPER_SERVERS=zk1.cloud,zk2.cloud,zk3.cloud \
 		    --net stormnet \
 		    --restart=always \
-		    baqend/storm supervisor \
-		     -c nimbus.host=nimbus \
-		     -c supervisor.slots.ports=[6700,6701,6702,6703]
+		    baqend/storm supervisor 
 Since we do not care where exactly the individual supervisors are running, we did not specify any constraints or container names here. However, in order to prevent two supervisors from being hosted on one machine, we did specify a **label affinity**: `affinity:role!=supervisor`. If you need more supervisor containers, you'll have to add additional Swarm worker nodes (`Ubuntu 4`, `Ubuntu 5`, ...).
 4. Have a look at the Storm UI and make sure that you have three supervisors running.
 

@@ -28,8 +28,7 @@ docker run \
     --restart=always \
     --name nimbus \
     -p 6627:6627 \
-    baqend/storm nimbus \
-      -c nimbus.host=nimbus
+    baqend/storm nimbus 
 
 # launch UI
 docker run \
@@ -42,8 +41,7 @@ docker run \
     --restart=always \
     --name ui \
     -p 8080:8080 \
-    baqend/storm ui \
-      -c nimbus.host=nimbus
+    baqend/storm ui 
 
 # launch the supervisors
 for (( i=1; i <= $SUPERVISORS; i++ )); do
@@ -55,9 +53,7 @@ for (( i=1; i <= $SUPERVISORS; i++ )); do
           -e STORM_ZOOKEEPER_SERVERS=$ZOOKEEPER_SERVERS \
           --net stormnet \
           --restart=always \
-          baqend/storm supervisor \
-           -c nimbus.host=nimbus \
-           -c supervisor.slots.ports=[6700,6701,6702,6703]
+          baqend/storm supervisor 
 done
 
 
