@@ -1,4 +1,4 @@
 #!/bin/bash
 
-groupadd docker
+# groupadd docker
 usermod -aG docker storm
