@@ -9,5 +9,5 @@ apt-get update -y &&  apt-get install -y linux-image-extra-$(uname -r) apparmor 
 
 
 # stop the Docker service and remove the key file
-service docker stop \
-&& rm /etc/docker/key.json
+# service docker stop \
+# && rm /etc/docker/key.json
